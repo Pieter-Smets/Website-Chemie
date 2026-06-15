@@ -1,0 +1,199 @@
+/* --- BASIS VARIABELEN --- */
+:root {
+    --primary-color: #1e3a8a; /* Diep donkerblauw (wetenschappelijk/betrouwbaar) */
+    --secondary-color: #3b82f6; /* Helder blauw */
+    --accent-color: #10b981; /* Fris groen voor knoppen/acties */
+    --bg-color: #f8fafc; /* Zeer licht grijze/blauwe achtergrond (rustig voor de ogen) */
+    --text-color: #334155; /* Donkergrijs voor teksten (beter leesbaar dan puur zwart) */
+    --card-bg: #ffffff;
+    
+    /* Variabelen voor de simulatie-elementen */
+    --metal-color: #94a3b8;
+    --nonmetal-color: #f59e0b;
+    --electron-color: #fbbf24;
+}
+
+/* --- ALGEMENE RESET & TYPOGRAFIE --- */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    line-height: 1.6;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* --- HEADER & NAVIGATIE --- */
+header {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 2rem 1rem;
+    text-align: center;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+header h1 {
+    font-size: 2.2rem;
+    margin-bottom: 0.5rem;
+}
+
+header p {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* --- HOOFDCONTAINER --- */
+main {
+    flex: 1; /* Neemt resterende hoogte in */
+    width: 100%;
+    max-width: 1100px;
+    margin: 2rem auto;
+    padding: 0 1.5rem;
+}
+
+/* --- DASHBOARD GRID (Startpagina) --- */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.module-card {
+    background-color: var(--card-bg);
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    border-top: 5px solid var(--secondary-color);
+}
+
+.module-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+.module-card h2 {
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
+}
+
+.module-card p {
+    flex-grow: 1; /* Duwt de knop altijd naar beneden */
+    margin-bottom: 1.5rem;
+    color: #64748b;
+}
+
+.module-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background-color: #e2e8f0;
+    color: #475569;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    margin-bottom: 1rem;
+    align-self: flex-start;
+}
+
+.module-badge.active {
+    background-color: #dcfce7;
+    color: #166534;
+}
+
+/* --- ALGEMENE COMPONENTEN (Voor de simulaties) --- */
+.container {
+    background: var(--card-bg);
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    margin-bottom: 2rem;
+}
+
+.controls {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+    background: var(--bg-color);
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+select, button, input {
+    padding: 10px 15px;
+    font-size: 15px;
+    border-radius: 6px;
+    border: 2px solid #cbd5e1;
+    outline: none;
+    font-family: inherit;
+}
+
+select:focus, input:focus {
+    border-color: var(--secondary-color);
+}
+
+button {
+    background-color: var(--secondary-color);
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.2s, transform 0.1s;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+}
+
+button:hover, .btn:hover {
+    background-color: #2563eb;
+}
+
+button:active, .btn:active {
+    transform: scale(0.98);
+}
+
+.btn-primary {
+    background-color: var(--accent-color);
+    padding: 12px 20px;
+}
+
+.btn-primary:hover {
+    background-color: #059669;
+}
+
+/* --- BERICHTEN & RESULTATEN BOX --- */
+.result-box {
+    background-color: #f0fdf4;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border-left: 5px solid var(--accent-color);
+    min-height: 80px;
+    line-height: 1.6;
+    font-size: 15px;
+}
+
+/* --- FOOTER --- */
+footer {
+    background-color: #1e293b;
+    color: #94a3b8;
+    text-align: center;
+    padding: 1.5rem;
+    margin-top: auto;
+}
