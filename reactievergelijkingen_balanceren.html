@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oefenen: Reactievergelijkingen Balanceren</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="oefen_data.js"></script>
+    <style>
+        /* --- SPECIFIEKE INTERACTIE STYLES --- */
+        .equation-display {
+            font-size: 1.4rem;
+            font-weight: 500;
+            letter-spacing: 1px;
+            background: #f1f5f9;
+            padding: 2rem;
+            border-radius: 8px;
+            text-align: center;
+            margin: 1.5rem 0;
+            border: 1px solid #cbd5e1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .equation-display input {
+            width: 45px;
+            height: 40px;
+            padding: 0;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 6px;
+            border: 2px solid #94a3b8;
+            color: var(--primary-color);
+        }
+
+        .equation-display input.correct {
+            border-color: var(--accent-color);
+            background-color: #f0fdf4;
+        }
+
+        .equation-display input.wrong {
+            border-color: #ef4444;
+            background-color: #fef2f2;
+        }
+
+        .progress-container {
+            width: 100%;
+            background-color: #e2e8f0;
+            border-radius: 10px;
+            height: 8px;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background-color: var(--secondary-color);
+            width: 0%;
+            transition: width 0.4s ease;
+        }
+
+        .quiz-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1.5rem;
+        }
+
+        .score-board {
+            font-weight: bold;
+            color: var(--text-color);
+        }
+
+        .nav-back {
+            position: absolute;
+            left: 20px;
+            top: 20px;
+            color: white;
+            text-decoration: none;
+            background-color: rgba(255, 255, 255, 0.15);
+            padding: 8px 15px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 14px;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-back:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .sub-question-title {
+            color: #64748b;
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+<body>
+
+<header style="position: relative;">
+    <a href="index.html" class="nav-back">
+        <span>&#8592;</span> Terug naar overzicht
+    </a>
+    
+    <h1>Reactievergelijkingen Balanceren</h1>
+    <p>Wet van behoud van massa: zorg dat er voor en na de reactiepijl evenveel atomen van elke soort zijn.</p>
+</header>
+
+<main>
+    <div class="container">
+        <div class="progress-container">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+
+        <div class="sub-question-title" id="oefening-titel">Oefening X van Y</div>
+        <h2 id="oefening-omschrijving" style="margin-bottom: 1rem; color: var(--primary-color);">Laad opdrachten...</h2>
+
+        <div class="equation-display" id="equation-container"></div>
+
+        <div class="result-box" id="feedback-box">
+            Vul de coëfficiënten in. Tip: als een coëfficiënt 1 is, mag je het vakje leeg laten of een 1 invullen!
+        </div>
+
+        <div class="quiz-footer">
+            <div class="score-board" id="score-display">Score: 0/0</div>
+            <div>
+                <button id="check-btn" class="btn-primary" onclick="controleerAntwoord()">Controleer</button>
+                <button id="next-btn" style="display: none;" class="btn-primary" onclick="volgendeOefening()">Volgende Vraag &rarr;</button>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer>
+    <p>&copy; 2026 - Interactief Chemie Lab voor Leerlingen</p>
+</footer>
+
+<script>
+    // Configuraties
+    const AANTAL_VRAGEN_PER_SESSIE = 10; 
+    let actieveOefeningen = [];
+    let huidigeIndex = 0;
+    let behaaldeScore = 0;
+
+    // Fisher-Yates Schud-algoritme om de array willekeurig te sorteren
+    function husselMatrix(array) {
+        let m = array.length, t, i;
+        while (m) {
+            i = Math.floor(Math.random() * m--);
+            t = array[m];
+            array[m] = array[i];
+            array[i] = t;
+        }
+        return array;
+    }
+
+    function initialiseerQuiz() {
+        // Kopieer de pool uit oefen_data.js zodat het origineel intact blijft
+        let kloonPool = [...alleOefeningenPool];
+        
+        // Schud alle opdrachten door elkaar
+        let geshuffeldePool = husselMatrix(kloonPool);
+        
+        // Selecteer het gewenste aantal vragen voor deze sessie
+        actieveOefeningen = geshuffeldePool.slice(0, AANTAL_VRAGEN_PER_SESSIE);
+        
+        huidigeIndex = 0;
+        behaaldeScore = 0;
+        
+        laadOefening();
+    }
+
+    function laadOefening() {
+        const oefening = actieveOefeningen[huidigeIndex];
+        
+        document.getElementById('oefening-titel').textContent = `Oefening ${huidigeIndex + 1} van ${actieveOefeningen.length}`;
+        document.getElementById('oefening-omschrijving').textContent = oefening.omschrijving;
+        document.getElementById('equation-container').innerHTML = oefening.htmlTemplate;
+        
+        const feedbackBox = document.getElementById('feedback-box');
+        feedbackBox.textContent = "Vul de invoervelden in en klik op 'Controleer'.";
+        feedbackBox.style.backgroundColor = "#f8fafc";
+        feedbackBox.style.borderLeftColor = "#cbd5e1";
+        
+        document.getElementById('check-btn').style.display = "inline-block";
+        document.getElementById('next-btn').style.display = "none";
+
+        const progPercentage = (huidigeIndex / actieveOefeningen.length) * 100;
+        document.getElementById('progress-bar').style.width = progPercentage + "%";
+        document.getElementById('score-display').textContent = `Score: ${behaaldeScore}/${actieveOefeningen.length}`;
+    }
+
+    function controleerAntwoord() {
+        const container = document.getElementById('equation-container');
+        const inputs = container.querySelectorAll('input');
+        let allesCorrect = true;
+
+        inputs.forEach(input => {
+            const verwacht = input.getAttribute('data-ans');
+            let ingevuld = input.value.trim();
+
+            // Als het verwachte antwoord 1 is, mag het veld ook blanco gelaten worden
+            if (verwacht === "1" && ingevuld === "") {
+                ingevuld = "1";
+            }
+
+            if (ingevuld === verwacht) {
+                input.classList.remove('wrong');
+                input.classList.add('correct');
+                input.disabled = true;
+            } else {
+                input.classList.remove('correct');
+                input.classList.add('wrong');
+                allesCorrect = false;
+            }
+        });
+
+        const feedbackBox = document.getElementById('feedback-box');
+        if (allesCorrect) {
+            behaaldeScore++;
+            feedbackBox.innerHTML = "<strong>🎉 Uitstekend gedaan!</strong> De wet van behoud van massa klopt perfect.";
+            feedbackBox.style.backgroundColor = "#f0fdf4";
+            feedbackBox.style.borderLeftColor = "var(--accent-color)";
+            
+            document.getElementById('check-btn').style.display = "none";
+            document.getElementById('next-btn').style.display = "inline-block";
+        } else {
+            feedbackBox.innerHTML = "<strong>❌ Nog niet helemaal juist.</strong> Tel de atoomsoorten voor en na de pijl opnieuw en corrigeer de rode velden.";
+            feedbackBox.style.backgroundColor = "#fef2f2";
+            feedbackBox.style.borderLeftColor = "#ef4444";
+        }
+        
+        document.getElementById('score-display').textContent = `Score: ${behaaldeScore}/${actieveOefeningen.length}`;
+    }
+
+    function volgendeOefening() {
+        huidigeIndex++;
+        if (huidigeIndex < actieveOefeningen.length) {
+            laadOefening();
+        } else {
+            // Einde sessie scherm
+            document.getElementById('progress-bar').style.width = "100%";
+            document.getElementById('oefening-titel').textContent = "Sessie Afgerond!";
+            document.getElementById('oefening-omschrijving').textContent = "Geweldig gewerkt! Je hebt deze set voltooid.";
+            
+            const percentage = Math.round((behaaldeScore / actieveOefeningen.length) * 100);
+            document.getElementById('equation-container').innerHTML = `🏆 Je score voor deze unieke reeks is <strong>${behaaldeScore} van de ${actieveOefeningen.length}</strong> (${percentage}%).`;
+            
+            const feedbackBox = document.getElementById('feedback-box');
+            feedbackBox.innerHTML = "Wil je nog een keer oefenen met een <strong>nieuwe, willekeurige selectie</strong> aan vragen? Klik op de knop hieronder.";
+            feedbackBox.style.backgroundColor = "#eff6ff";
+            feedbackBox.style.borderLeftColor = "var(--secondary-color)";
+            
+            document.getElementById('next-btn').style.display = "none";
+            
+            // Verander de controleerknop in een herstartknop
+            const checkBtn = document.getElementById('check-btn');
+            checkBtn.style.display = "inline-block";
+            checkBtn.textContent = "Nieuwe Random Reeks Starten ↻";
+            checkBtn.onclick = function() {
+                checkBtn.textContent = "Controleer";
+                checkBtn.onclick = controleerAntwoord;
+                initialiseerQuiz();
+            };
+        }
+    }
+
+    // Start de quiz bij het laden van de pagina
+    window.onload = initialiseerQuiz;
+</script>
+
+</body>
+</html>
