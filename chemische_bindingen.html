@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Oefenen: Chemische Bindingen & Oxidatiegetallen</title>
+    <title>Oefenen: Chemische Bindingen</title>
     <link rel="stylesheet" href="style.css">
     <style>
         .question-card {
@@ -119,6 +119,7 @@
         }
 
         .nav-back:hover { background-color: rgba(255, 255, 255, 0.3); }
+        
         .sub-question-title {
             color: #64748b;
             font-size: 0.95rem;
@@ -127,32 +128,84 @@
             letter-spacing: 0.5px;
             font-weight: bold;
         }
+
+        /* Mode-selectie kaarten */
+        .mode-container {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .mode-card {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 2rem;
+            width: 280px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s, border-color 0.2s;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+        }
+
+        .mode-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--secondary-color);
+        }
+
+        .mode-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
     </style>
 </head>
 <body>
 
 <header style="position: relative;">
     <a href="index.html" class="nav-back">
-        <span>&#8592;</span> Terug naar overzicht
+        <span>&#8592;</span> Dashboard
     </a>
-    <h1>Chemische Bindingen & Oxidatiegetallen</h1>
-    <p>Oefen met ionvorming, het herkennen van bindingstypes en het bepalen van oxidatiegetallen.</p>
+    <h1>Chemische Bindingen</h1>
+    <p id="header-subtext">Kies een oefenmodus om van start te gaan.</p>
 </header>
 
 <main>
-    <div class="container">
+    <div class="container" id="mode-selection-screen">
+        <h2 style="text-align: center; color: var(--primary-color); margin-bottom: 0.5rem;">Kies je Oefenniveau</h2>
+        <p style="text-align: center; color: #64748b; margin-bottom: 2rem;">Je kunt op elk moment terugkeren om het andere niveau te proberen.</p>
+        
+        <div class="mode-container">
+            <div class="mode-card" onclick="initialiseerQuiz(false)">
+                <div class="mode-icon">🌱</div>
+                <h3>Zonder Oxidatiegetallen</h3>
+                <p style="font-size: 0.9rem; color: #64748b; margin-top: 0.5rem;">Focus op ionvorming, elementaire deeltjes en het herkennen van het juiste bindingstype.</p>
+                <button class="btn-primary" style="margin-top: 1.5rem; width: 100%; background-color: #64748b;">Start Basis</button>
+            </div>
+
+            <div class="mode-card" onclick="initialiseerQuiz(true)" style="border-color: #e2e8f0;">
+                <div class="mode-icon">🚀</div>
+                <h3>Met Oxidatiegetallen</h3>
+                <p style="font-size: 0.9rem; color: #64748b; margin-top: 0.5rem;">Alles uit de basis + het bepalen van de Romeinse oxidatiegetallen (OG) volgens de octetregel.</p>
+                <button class="btn-primary" style="margin-top: 1.5rem; width: 100%;">Start Expert</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container" id="quiz-screen" style="display: none;">
         <div class="progress-container">
             <div class="progress-bar" id="progress-bar"></div>
         </div>
 
-        <div class="sub-question-title" id="oefening-titel">Laden...</div>
+        <div class="sub-question-title" id="oefening-titel">Opgave</div>
         <h2 id="oefening-omschrijving" style="margin-bottom: 0.5rem; color: var(--primary-color);">Laden...</h2>
         <p id="oefening-subtekst" style="color: #64748b; margin-bottom: 1rem;"></p>
 
         <div class="question-card" id="question-container"></div>
 
         <div class="result-box" id="feedback-box">
-            Vul de juiste gegevens in en klik op 'Controleer'.
+            Vul de gegevens in en klik op 'Controleer'.
         </div>
 
         <div class="quiz-footer">
@@ -170,12 +223,19 @@
 </footer>
 
 <script>
-    // Database met oefeningen over Chemische Bindingen
+    // Grote database met flexibele templates (afhankelijk van de gekozen modus)
     const alleOefeningen = [
         {
             omschrijving: "Bepaal de elementaire deeltjes van dit ion.",
-            subtekst: "Let op! Een zwavelion (S²⁻) heeft een negatieve lading. Wat betekent dit voor het aantal elektronen?",
-            htmlTemplate: `
+            subtekst: "Let op! Een zwavelion (S²⁻) heeft een negatieve lading. Wat betekent dit voor de elektronenwolk?",
+            htmlZonderOG: `
+                <div class="formula-display">S<sup>2&minus;</sup> (Z = 16, A = 32)</div>
+                <div class="input-grid">
+                    <div class="input-group">Protonen (p⁺)<input type="text" data-ans="16"></div>
+                    <div class="input-group">Neutronen (n⁰)<input type="text" data-ans="16"></div>
+                    <div class="input-grid"><div class="input-group">Elektronen (e⁻)<input type="text" data-ans="18"></div></div>
+                </div>`,
+            htmlMetOG: `
                 <div class="formula-display">S<sup>2&minus;</sup> (Z = 16, A = 32)</div>
                 <div class="input-grid">
                     <div class="input-group">Protonen (p⁺)<input type="text" data-ans="16"></div>
@@ -185,8 +245,20 @@
         },
         {
             omschrijving: "Analyseer de binding in kaliumchloride (KCl).",
-            subtekst: "Is dit opgebouwd uit metalen, niet-metalen of een combinatie? Bepaal daarna het bindingstype en de oxidatiegetallen (gebruik Romeinse cijfers zoals +I, -I).",
-            htmlTemplate: `
+            subtekst: "Is dit opgebouwd uit metalen, niet-metalen of een combinatie?",
+            htmlZonderOG: `
+                <div class="formula-display">KCl</div>
+                <div class="input-grid">
+                    <div class="input-group">Type Binding
+                        <select data-ans="ionverbinding">
+                            <option value="">-- Kies binding --</option>
+                            <option value="ionverbinding">Ionverbinding</option>
+                            <option value="atoomverbinding">Atoomverbinding</option>
+                            <option value="metaalbinding">Metaalbinding</option>
+                        </select>
+                    </div>
+                </div>`,
+            htmlMetOG: `
                 <div class="formula-display">KCl</div>
                 <div class="input-grid">
                     <div class="input-group">Type Binding
@@ -203,8 +275,20 @@
         },
         {
             omschrijving: "Analyseer de binding in diwaterstofsulfide (H₂S).",
-            subtekst: "Waterstof en zwavel zijn beide niet-metalen. Vul het bindingstype en de oxidatiegetallen in (Romeinse cijfers).",
-            htmlTemplate: `
+            subtekst: "Waterstof en zwavel zijn beide niet-metalen.",
+            htmlZonderOG: `
+                <div class="formula-display">H<sub>2</sub>S</div>
+                <div class="input-grid">
+                    <div class="input-group">Type Binding
+                        <select data-ans="atoomverbinding">
+                            <option value="">-- Kies binding --</option>
+                            <option value="ionverbinding">Ionverbinding</option>
+                            <option value="atoomverbinding">Atoomverbinding (Covalent)</option>
+                            <option value="metaalbinding">Metaalbinding</option>
+                        </select>
+                    </div>
+                </div>`,
+            htmlMetOG: `
                 <div class="formula-display">H<sub>2</sub>S</div>
                 <div class="input-grid">
                     <div class="input-group">Type Binding
@@ -221,8 +305,20 @@
         },
         {
             omschrijving: "Analyseer de binding in natriumoxide (Na₂O).",
-            subtekst: "Bepaal de binding tussen natrium (metaal) en zuurstof (niet-metaal) en geef de oxidatiegetallen.",
-            htmlTemplate: `
+            subtekst: "Onderscheid goed de binding tussen natrium (metaal) en zuurstof (niet-metaal).",
+            htmlZonderOG: `
+                <div class="formula-display">Na<sub>2</sub>O</div>
+                <div class="input-grid">
+                    <div class="input-group">Type Binding
+                        <select data-ans="ionverbinding">
+                            <option value="">-- Kies binding --</option>
+                            <option value="ionverbinding">Ionverbinding</option>
+                            <option value="atoomverbinding">Atoomverbinding</option>
+                            <option value="metaalbinding">Metaalbinding</option>
+                        </select>
+                    </div>
+                </div>`,
+            htmlMetOG: `
                 <div class="formula-display">Na<sub>2</sub>O</div>
                 <div class="input-grid">
                     <div class="input-group">Type Binding
@@ -238,9 +334,21 @@
                 </div>`
         },
         {
-            omschrijving: "Analyseer deze enkelvoudige stof: stikstofgas (N₂).",
-            subtekst: "Wat is het oxidatiegetal van een element in een enkelvoudige stof? Gebruik Romeinse cijfers of 0.",
-            htmlTemplate: `
+            omschrijving: "Analyseer deze stof: stikstofgas (N₂).",
+            subtekst: "Twee identieke niet-metalen die aan elkaar binden.",
+            htmlZonderOG: `
+                <div class="formula-display">N<sub>2</sub></div>
+                <div class="input-grid">
+                    <div class="input-group">Type Binding
+                        <select data-ans="atoomverbinding">
+                            <option value="">-- Kies binding --</option>
+                            <option value="ionverbinding">Ionverbinding</option>
+                            <option value="atoomverbinding">Atoomverbinding (Covalent)</option>
+                            <option value="metaalbinding">Metaalbinding</option>
+                        </select>
+                    </div>
+                </div>`,
+            htmlMetOG: `
                 <div class="formula-display">N<sub>2</sub></div>
                 <div class="input-grid">
                     <div class="input-group">Type Binding
@@ -256,8 +364,20 @@
         },
         {
             omschrijving: "Analyseer magnesiummetaal (Mg).",
-            subtekst: "Magnesium in zijn pure, ongebonden vorm.",
-            htmlTemplate: `
+            subtekst: "Magnesium in zijn pure, ongebonden metaalvorm.",
+            htmlZonderOG: `
+                <div class="formula-display">Mg (metaal)</div>
+                <div class="input-grid">
+                    <div class="input-group">Type Binding
+                        <select data-ans="metaalbinding">
+                            <option value="">-- Kies binding --</option>
+                            <option value="ionverbinding">Ionverbinding</option>
+                            <option value="atoomverbinding">Atoomverbinding</option>
+                            <option value="metaalbinding">Metaalbinding</option>
+                        </select>
+                    </div>
+                </div>`,
+            htmlMetOG: `
                 <div class="formula-display">Mg (metaal)</div>
                 <div class="input-grid">
                     <div class="input-group">Type Binding
@@ -273,60 +393,55 @@
         },
         {
             omschrijving: "Ionen vormen en de octetregel (Natrium).",
-            subtekst: "Een neutraal natriumatoom heeft configuratie K:2, L:8, M:1. Wat doet het om stabiel te worden?",
-            htmlTemplate: `
+            subtekst: "Een neutraal natriumatoom heeft configuratie K:2, L:8, M:1. Wat gebeurt er?",
+            htmlZonderOG: `
                 <div class="input-grid">
                     <div class="input-group">Aantal e⁻ te veranderen
                         <select data-ans="1">
                             <option value="">-- Aantal --</option>
                             <option value="1">1 elektron</option>
                             <option value="2">2 elektronen</option>
-                            <option value="3">3 elektronen</option>
                         </select>
                     </div>
                     <div class="input-group">Actie
                         <select data-ans="afgeven">
                             <option value="">-- Actie --</option>
-                            <option value="afgeven">Afgeven (doneren)</option>
-                            <option value="opnemen">Opnemen (accepteren)</option>
+                            <option value="afgeven">Afgeven</option>
+                            <option value="opnemen">Opnemen</option>
                         </select>
                     </div>
                     <div class="input-group">Resulterende lading van Na-ion
                         <input type="text" placeholder="bv. +1 of 1+" data-ans="+1">
                     </div>
-                </div>`
-        },
-        {
-            omschrijving: "Ionen vormen en de octetregel (Fluor).",
-            subtekst: "Een neutraal fluoratoom heeft configuratie K:2, L:7. Wat gebeurt er bij de vorming van een fluoride-ion?",
-            htmlTemplate: `
+                </div>`,
+            htmlMetOG: `
                 <div class="input-grid">
                     <div class="input-group">Aantal e⁻ te veranderen
                         <select data-ans="1">
                             <option value="">-- Aantal --</option>
                             <option value="1">1 elektron</option>
                             <option value="2">2 elektronen</option>
-                            <option value="3">3 elektronen</option>
                         </select>
                     </div>
                     <div class="input-group">Actie
-                        <select data-ans="opnemen">
+                        <select data-ans="afgeven">
                             <option value="">-- Actie --</option>
-                            <option value="afgeven">Afgeven (doneren)</option>
-                            <option value="opnemen">Opnemen (accepteren)</option>
+                            <option value="afgeven">Afgeven</option>
+                            <option value="opnemen">Opnemen</option>
                         </select>
                     </div>
-                    <div class="input-group">Resulterende lading van F-ion
-                        <input type="text" placeholder="bv. -1 of 1-" data-ans="-1">
+                    <div class="input-group">Resulterende lading van Na-ion
+                        <input type="text" placeholder="bv. +1" data-ans="+1">
                     </div>
                 </div>`
         }
     ];
 
-    const AANTAL_VRAGEN_PER_SESVIE = 6;
+    const AANTAL_VRAGEN_PER_SESSIE = 5;
     let actieveOefeningen = [];
     let huidigeIndex = 0;
     let behaaldeScore = 0;
+    let modusMetOG = false; // Onthoudt de gekozen modus globally
 
     function husselMatrix(array) {
         let m = array.length, t, i;
@@ -339,9 +454,17 @@
         return array;
     }
 
-    function initialiseerQuiz() {
+    // Start de quiz op basis van de gekozen modusknop
+    function initialiseerQuiz(metOG) {
+        modusMetOG = metOG;
+        
+        // Interface aanpassen naar actieve quizmodus
+        document.getElementById('mode-selection-screen').style.display = 'none';
+        document.getElementById('quiz-screen').style.display = 'block';
+        document.getElementById('header-subtext').textContent = metOG ? "Modus: Expert (Inclusief Oxidatiegetallen)" : "Modus: Basis (Zonder Oxidatiegetallen)";
+
         let geshuffeldePool = husselMatrix([...alleOefeningen]);
-        actieveOefeningen = geshuffeldePool.slice(0, AANTAL_VRAGEN_PER_SESVIE);
+        actieveOefeningen = geshuffeldePool.slice(0, AANTAL_VRAGEN_PER_SESSIE);
         huidigeIndex = 0;
         behaaldeScore = 0;
         laadOefening();
@@ -353,7 +476,9 @@
         document.getElementById('oefening-titel').textContent = `Opgave ${huidigeIndex + 1} van ${actieveOefeningen.length}`;
         document.getElementById('oefening-omschrijving').textContent = oefening.omschrijving;
         document.getElementById('oefening-subtekst').textContent = oefening.subtekst;
-        document.getElementById('question-container').innerHTML = oefening.htmlTemplate;
+        
+        // Kies de juiste HTML-template op basis van de modus
+        document.getElementById('question-container').innerHTML = modusMetOG ? oefening.htmlMetOG : oefening.htmlZonderOG;
         
         const feedbackBox = document.getElementById('feedback-box');
         feedbackBox.textContent = "Vul de gegevens in en klik op 'Controleer'.";
@@ -377,7 +502,7 @@
             const verwacht = input.getAttribute('data-ans').toLowerCase().replace(/\s+/g, '');
             let ingevuld = input.value.toLowerCase().replace(/\s+/g, '');
 
-            // Ondersteun ook alternatieve ladingnotaties zoals 1- in plaats van -1
+            // Flexibele controle voor ladingnotaties (bv. 1- versus -1)
             if (verwacht === "-1" && ingevuld === "1-") ingevuld = "-1";
             if (verwacht === "+1" && ingevuld === "1+") ingevuld = "+1";
 
@@ -395,13 +520,13 @@
         const feedbackBox = document.getElementById('feedback-box');
         if (allesCorrect) {
             behaaldeScore++;
-            feedbackBox.innerHTML = "<strong>🎉 Uitstekend!</strong> Alle bindingstypes, deeltjes en getallen kloppen.";
+            feedbackBox.innerHTML = "<strong>🎉 Geweldig!</strong> Alles is correct ingevuld.";
             feedbackBox.style.backgroundColor = "#f0fdf4";
             feedbackBox.style.borderLeftColor = "var(--accent-color)";
             document.getElementById('check-btn').style.display = "none";
             document.getElementById('next-btn').style.display = "inline-block";
         } else {
-            feedbackBox.innerHTML = "<strong>❌ Nog niet correct.</strong> Kijk kritisch naar de rood-omrande vakjes en pas ze aan.";
+            feedbackBox.innerHTML = "<strong>❌ Nog niet helemaal juist.</strong> Controleer de rood-omrande vakjes.";
             feedbackBox.style.backgroundColor = "#fef2f2";
             feedbackBox.style.borderLeftColor = "#ef4444";
         }
@@ -415,19 +540,19 @@
             laadOefening();
         } else {
             document.getElementById('progress-bar').style.width = "100%";
-            document.getElementById('oefening-titel').textContent = "Sessie afgerond!";
-            document.getElementById('oefening-omschrijving').textContent = "Knap gewerkt! Je bent klaar met deze reeks.";
+            document.getElementById('oefening-titel').textContent = "Sessie voltooid!";
+            document.getElementById('oefening-omschrijving').textContent = "Mooi resultaat! Je bent klaar met deze reeks.";
             document.getElementById('oefening-subtekst').textContent = "";
             
             const percentage = Math.round((behaaldeScore / actieveOefeningen.length) * 100);
             document.getElementById('question-container').innerHTML = `
                 <div style="text-align:center; font-size: 1.5rem; color:var(--text-color); padding: 1rem 0;">
-                    🧪<br><br>
-                    Eindscore chemische bindingen: <strong>${behaaldeScore} / ${actieveOefeningen.length}</strong> (${percentage}%)
+                    🏆<br><br>
+                    Eindscore voor deze reeks: <strong>${behaaldeScore} / ${actieveOefeningen.length}</strong> (${percentage}%)
                 </div>`;
             
             const feedbackBox = document.getElementById('feedback-box');
-            feedbackBox.innerHTML = "Klik hieronder om een nieuwe willekeurige sessie te starten.";
+            feedbackBox.innerHTML = "Wil je terug naar het hoofdmenu om een andere modus te kiezen?";
             feedbackBox.style.backgroundColor = "#eff6ff";
             feedbackBox.style.borderLeftColor = "var(--secondary-color)";
             
@@ -435,16 +560,17 @@
             
             const checkBtn = document.getElementById('check-btn');
             checkBtn.style.display = "inline-block";
-            checkBtn.textContent = "Nieuwe Oefensessie ↻";
+            checkBtn.textContent = "Terug naar Modusselectie ↻";
             checkBtn.onclick = function() {
+                // Reset naar keuzescherm
+                document.getElementById('quiz-screen').style.display = 'none';
+                document.getElementById('mode-selection-screen').style.display = 'block';
+                document.getElementById('header-subtext').textContent = "Kies een oefenmodus om van start te gaan.";
                 checkBtn.textContent = "Controleer";
                 checkBtn.onclick = controleerAntwoord;
-                initialiseerQuiz();
             };
         }
     }
-
-    window.onload = initialiseerQuiz;
 </script>
 
 </body>
