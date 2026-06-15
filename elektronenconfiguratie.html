@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oefenen: Atoombouw & Elektronenconfiguratie</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Specifieke stijlen voor deze module */
+        .question-card {
+            background: #f8fafc;
+            padding: 2rem;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            margin: 1.5rem 0;
+        }
+
+        .symbol-display {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            text-align: center;
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .isotope-notation {
+            display: inline-flex;
+            flex-direction: column;
+            justify-content: center;
+            font-size: 1.2rem;
+            line-height: 1.1;
+            margin-right: 5px;
+            text-align: right;
+        }
+
+        .input-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .input-group {
+            background: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            font-weight: bold;
+            color: var(--text-color);
+        }
+
+        .input-group input {
+            width: 60px;
+            height: 45px;
+            text-align: center;
+            font-size: 1.2rem;
+            border-radius: 6px;
+            border: 2px solid #94a3b8;
+            color: var(--primary-color);
+            outline: none;
+        }
+
+        .input-group input:focus {
+            border-color: var(--secondary-color);
+        }
+
+        .input-group input.correct {
+            border-color: var(--accent-color);
+            background-color: #f0fdf4;
+        }
+
+        .input-group input.wrong {
+            border-color: #ef4444;
+            background-color: #fef2f2;
+        }
+
+        .progress-container {
+            width: 100%;
+            background-color: #e2e8f0;
+            border-radius: 10px;
+            height: 8px;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background-color: var(--secondary-color);
+            width: 0%;
+            transition: width 0.4s ease;
+        }
+
+        .quiz-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1.5rem;
+        }
+
+        .score-board {
+            font-weight: bold;
+            color: var(--text-color);
+        }
+
+        .nav-back {
+            position: absolute;
+            left: 20px;
+            top: 20px;
+            color: white;
+            text-decoration: none;
+            background-color: rgba(255, 255, 255, 0.15);
+            padding: 8px 15px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 14px;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-back:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .sub-question-title {
+            color: #64748b;
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<header style="position: relative;">
+    <a href="index.html" class="nav-back">
+        <span>&#8592;</span> Terug naar overzicht
+    </a>
+    
+    <h1>Atoombouw & Elektronenconfiguratie</h1>
+    <p>Oefen met atoommodellen, protonen, neutronen en de verdeling van elektronen over de schillen.</p>
+</header>
+
+<main>
+    <div class="container">
+        <div class="progress-container">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+
+        <div class="sub-question-title" id="oefening-titel">Laden...</div>
+        <h2 id="oefening-omschrijving" style="margin-bottom: 0.5rem; color: var(--primary-color);">Laden...</h2>
+        <p id="oefening-subtekst" style="color: #64748b; margin-bottom: 1rem;"></p>
+
+        <div class="question-card" id="question-container"></div>
+
+        <div class="result-box" id="feedback-box">
+            Vul de juiste aantallen in en klik op 'Controleer'.
+        </div>
+
+        <div class="quiz-footer">
+            <div class="score-board" id="score-display">Score: 0/0</div>
+            <div>
+                <button id="check-btn" class="btn-primary" onclick="controleerAntwoord()">Controleer</button>
+                <button id="next-btn" style="display: none;" class="btn-primary" onclick="volgendeOefening()">Volgende Vraag &rarr;</button>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer>
+    <p>&copy; 2026 - Interactief Chemie Lab voor Leerlingen</p>
+</footer>
+
+<script>
+    // Database met oefeningen (Atoombouw & Configuraties)
+    const alleOefeningen = [
+        // DEEL 1: ATOOMBOUW (Protonen, Neutronen, Elektronen)
+        {
+            omschrijving: "Bepaal de samenstelling van Koolstof-12.",
+            subtekst: "Gebruik het massagetal (A) en atoomnummer (Z) in de notatie.",
+            htmlTemplate: `
+                <div class="symbol-display">
+                    <div class="isotope-notation"><span>12</span><span>6</span></div> C
+                </div>
+                <div class="input-grid">
+                    <div class="input-group">Protonen (p⁺)<input type="text" data-ans="6"></div>
+                    <div class="input-group">Neutronen (n⁰)<input type="text" data-ans="6"></div>
+                    <div class="input-group">Elektronen (e⁻)<input type="text" data-ans="6"></div>
+                </div>`
+        },
+        {
+            omschrijving: "Bepaal de samenstelling van Fosfor-31.",
+            subtekst: "Bereken het aantal neutronen via: massagetal - atoomnummer.",
+            htmlTemplate: `
+                <div class="symbol-display">
+                    <div class="isotope-notation"><span>31</span><span>15</span></div> P
+                </div>
+                <div class="input-grid">
+                    <div class="input-group">Protonen (p⁺)<input type="text" data-ans="15"></div>
+                    <div class="input-group">Neutronen (n⁰)<input type="text" data-ans="16"></div>
+                    <div class="input-group">Elektronen (e⁻)<input type="text" data-ans="15"></div>
+                </div>`
+        },
+        {
+            omschrijving: "Bepaal de samenstelling van Kalium-39.",
+            subtekst: "Een neutraal atoom heeft evenveel protonen als elektronen.",
+            htmlTemplate: `
+                <div class="symbol-display">
+                    <div class="isotope-notation"><span>39</span><span>19</span></div> K
+                </div>
+                <div class="input-grid">
+                    <div class="input-group">Protonen (p⁺)<input type="text" data-ans="19"></div>
+                    <div class="input-group">Neutronen (n⁰)<input type="text" data-ans="20"></div>
+                    <div class="input-group">Elektronen (e⁻)<input type="text" data-ans="19"></div>
+                </div>`
+        },
+        {
+            omschrijving: "Bepaal de samenstelling van Aluminium-27.",
+            subtekst: "Kijk goed naar de opbouw van dit isotoop.",
+            htmlTemplate: `
+                <div class="symbol-display">
+                    <div class="isotope-notation"><span>27</span><span>13</span></div> Al
+                </div>
+                <div class="input-grid">
+                    <div class="input-group">Protonen (p⁺)<input type="text" data-ans="13"></div>
+                    <div class="input-group">Neutronen (n⁰)<input type="text" data-ans="14"></div>
+                    <div class="input-group">Elektronen (e⁻)<input type="text" data-ans="13"></div>
+                </div>`
+        },
+        {
+            omschrijving: "Bepaal de samenstelling van Broom-81.",
+            subtekst: "Broom heeft atoomnummer 35. Wat zijn de deeltjes voor het isotoop Br-81?",
+            htmlTemplate: `
+                <div class="symbol-display">Br-81 (Z = 35)</div>
+                <div class="input-grid">
+                    <div class="input-group">Protonen (p⁺)<input type="text" data-ans="35"></div>
+                    <div class="input-group">Neutronen (n⁰)<input type="text" data-ans="46"></div>
+                    <div class="input-group">Elektronen (e⁻)<input type="text" data-ans="35"></div>
+                </div>`
+        },
+        
+        // DEEL 2: SCHILLEN & ELEKTRONENCONFIGURATIE
+        {
+            omschrijving: "Maximale capaciteit van de schillen.",
+            subtekst: "Hoeveel elektronen passen er maximaal op deze eerste vier schillen? (Denk aan de formule 2n²).",
+            htmlTemplate: `
+                <div class="input-grid">
+                    <div class="input-group">K-schil (n=1)<input type="text" data-ans="2"></div>
+                    <div class="input-group">L-schil (n=2)<input type="text" data-ans="8"></div>
+                    <div class="input-group">M-schil (n=3)<input type="text" data-ans="18"></div>
+                    <div class="input-group">N-schil (n=4)<input type="text" data-ans="32"></div>
+                </div>`
+        },
+        {
+            omschrijving: "Geef de elektronenconfiguratie van Natrium (Na).",
+            subtekst: "Natrium heeft atoomnummer 11. Verdeel de 11 elektronen over de schillen.",
+            htmlTemplate: `
+                <div class="symbol-display">Na (Z = 11)</div>
+                <div class="input-grid">
+                    <div class="input-group">K-schil<input type="text" data-ans="2"></div>
+                    <div class="input-group">L-schil<input type="text" data-ans="8"></div>
+                    <div class="input-group">M-schil<input type="text" data-ans="1"></div>
+                </div>`
+        },
+        {
+            omschrijving: "Geef de elektronenconfiguratie van Aluminium (Al).",
+            subtekst: "Aluminium heeft atoomnummer 13. Vul de schillen van binnen naar buiten.",
+            htmlTemplate: `
+                <div class="symbol-display">Al (Z = 13)</div>
+                <div class="input-grid">
+                    <div class="input-group">K-schil<input type="text" data-ans="2"></div>
+                    <div class="input-group">L-schil<input type="text" data-ans="8"></div>
+                    <div class="input-group">M-schil<input type="text" data-ans="3"></div>
+                </div>`
+        },
+        {
+            omschrijving: "Geef de elektronenconfiguratie van Koolstof (C).",
+            subtekst: "Koolstof heeft atoomnummer 6.",
+            htmlTemplate: `
+                <div class="symbol-display">C (Z = 6)</div>
+                <div class="input-grid">
+                    <div class="input-group">K-schil<input type="text" data-ans="2"></div>
+                    <div class="input-group">L-schil<input type="text" data-ans="4"></div>
+                    <div class="input-group">M-schil<input type="text" data-ans="0"></div>
+                </div>`
+        },
+        {
+            omschrijving: "Geef de elektronenconfiguratie van Chloor (Cl).",
+            subtekst: "Chloor heeft atoomnummer 17. Dit is een halogeen.",
+            htmlTemplate: `
+                <div class="symbol-display">Cl (Z = 17)</div>
+                <div class="input-grid">
+                    <div class="input-group">K-schil<input type="text" data-ans="2"></div>
+                    <div class="input-group">L-schil<input type="text" data-ans="8"></div>
+                    <div class="input-group">M-schil<input type="text" data-ans="7"></div>
+                </div>`
+        },
+        {
+            omschrijving: "Geef de elektronenconfiguratie van het edelgas Argon (Ar).",
+            subtekst: "Argon heeft atoomnummer 18. Edelgassen hebben een volle buitenste schil (octetstructuur).",
+            htmlTemplate: `
+                <div class="symbol-display">Ar (Z = 18)</div>
+                <div class="input-grid">
+                    <div class="input-group">K-schil<input type="text" data-ans="2"></div>
+                    <div class="input-group">L-schil<input type="text" data-ans="8"></div>
+                    <div class="input-group">M-schil<input type="text" data-ans="8"></div>
+                </div>`
+        }
+    ];
+
+    const AANTAL_VRAGEN_PER_SESSIE = 8; 
+    let actieveOefeningen = [];
+    let huidigeIndex = 0;
+    let behaaldeScore = 0;
+
+    // Fisher-Yates Schud-algoritme
+    function husselMatrix(array) {
+        let m = array.length, t, i;
+        while (m) {
+            i = Math.floor(Math.random() * m--);
+            t = array[m];
+            array[m] = array[i];
+            array[i] = t;
+        }
+        return array;
+    }
+
+    function initialiseerQuiz() {
+        let geshuffeldePool = husselMatrix([...alleOefeningen]);
+        actieveOefeningen = geshuffeldePool.slice(0, AANTAL_VRAGEN_PER_SESSIE);
+        huidigeIndex = 0;
+        behaaldeScore = 0;
+        laadOefening();
+    }
+
+    function laadOefening() {
+        const oefening = actieveOefeningen[huidigeIndex];
+        
+        document.getElementById('oefening-titel').textContent = `Opgave ${huidigeIndex + 1} van ${actieveOefeningen.length}`;
+        document.getElementById('oefening-omschrijving').textContent = oefening.omschrijving;
+        document.getElementById('oefening-subtekst').textContent = oefening.subtekst;
+        document.getElementById('question-container').innerHTML = oefening.htmlTemplate;
+        
+        const feedbackBox = document.getElementById('feedback-box');
+        feedbackBox.textContent = "Vul de getallen in en klik op 'Controleer'.";
+        feedbackBox.style.backgroundColor = "#f8fafc";
+        feedbackBox.style.borderLeftColor = "#cbd5e1";
+        
+        document.getElementById('check-btn').style.display = "inline-block";
+        document.getElementById('next-btn').style.display = "none";
+
+        const progPercentage = (huidigeIndex / actieveOefeningen.length) * 100;
+        document.getElementById('progress-bar').style.width = progPercentage + "%";
+        document.getElementById('score-display').textContent = `Score: ${behaaldeScore}/${actieveOefeningen.length}`;
+    }
+
+    function controleerAntwoord() {
+        const container = document.getElementById('question-container');
+        const inputs = container.querySelectorAll('input');
+        let allesCorrect = true;
+
+        inputs.forEach(input => {
+            const verwacht = input.getAttribute('data-ans');
+            let ingevuld = input.value.trim();
+
+            // Soms vullen leerlingen niks in i.p.v. 0 (bij een lege schil)
+            if (verwacht === "0" && ingevuld === "") ingevuld = "0";
+
+            if (ingevuld === verwacht) {
+                input.classList.remove('wrong');
+                input.classList.add('correct');
+                input.disabled = true;
+            } else {
+                input.classList.remove('correct');
+                input.classList.add('wrong');
+                allesCorrect = false;
+            }
+        });
+
+        const feedbackBox = document.getElementById('feedback-box');
+        if (allesCorrect) {
+            behaaldeScore++;
+            feedbackBox.innerHTML = "<strong>🎉 Correct!</strong> De berekening en configuratie kloppen helemaal.";
+            feedbackBox.style.backgroundColor = "#f0fdf4";
+            feedbackBox.style.borderLeftColor = "var(--accent-color)";
+            document.getElementById('check-btn').style.display = "none";
+            document.getElementById('next-btn').style.display = "inline-block";
+        } else {
+            feedbackBox.innerHTML = "<strong>❌ Niet helemaal juist.</strong> Kijk je invoer na en pas de rode vakjes aan.";
+            feedbackBox.style.backgroundColor = "#fef2f2";
+            feedbackBox.style.borderLeftColor = "#ef4444";
+        }
+        
+        document.getElementById('score-display').textContent = `Score: ${behaaldeScore}/${actieveOefeningen.length}`;
+    }
+
+    function volgendeOefening() {
+        huidigeIndex++;
+        if (huidigeIndex < actieveOefeningen.length) {
+            laadOefening();
+        } else {
+            document.getElementById('progress-bar').style.width = "100%";
+            document.getElementById('oefening-titel').textContent = "Oefensessie voltooid!";
+            document.getElementById('oefening-omschrijving').textContent = "Goed gedaan, je hebt alle opgaven gemaakt.";
+            document.getElementById('oefening-subtekst').textContent = "";
+            
+            const percentage = Math.round((behaaldeScore / actieveOefeningen.length) * 100);
+            document.getElementById('question-container').innerHTML = `
+                <div class="symbol-display" style="flex-direction:column; gap:10px;">
+                    🏆<br>
+                    <span style="font-size: 1.5rem; color:var(--text-color);">Eindscore: <strong>${behaaldeScore} / ${actieveOefeningen.length}</strong> (${percentage}%)</span>
+                </div>`;
+            
+            const feedbackBox = document.getElementById('feedback-box');
+            feedbackBox.innerHTML = "Wil je nog een keer oefenen met nieuwe willekeurige opgaven? Klik dan hieronder.";
+            feedbackBox.style.backgroundColor = "#eff6ff";
+            feedbackBox.style.borderLeftColor = "var(--secondary-color)";
+            
+            document.getElementById('next-btn').style.display = "none";
+            
+            const checkBtn = document.getElementById('check-btn');
+            checkBtn.style.display = "inline-block";
+            checkBtn.textContent = "Nieuwe Oefensessie Starten ↻";
+            checkBtn.onclick = function() {
+                checkBtn.textContent = "Controleer";
+                checkBtn.onclick = controleerAntwoord;
+                initialiseerQuiz();
+            };
+        }
+    }
+
+    window.onload = initialiseerQuiz;
+</script>
+
+</body>
+</html>
