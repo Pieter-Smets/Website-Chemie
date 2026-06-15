@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oefenen: Chemische Bindingen & Oxidatiegetallen</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .question-card {
+            background: #f8fafc;
+            padding: 2rem;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            margin: 1.5rem 0;
+        }
+
+        .formula-display {
+            font-size: 2.2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .input-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .input-group {
+            background: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            font-weight: bold;
+            color: var(--text-color);
+        }
+
+        .input-group input, .input-group select {
+            height: 45px;
+            text-align: center;
+            font-size: 1.1rem;
+            border-radius: 6px;
+            border: 2px solid #94a3b8;
+            color: var(--primary-color);
+            outline: none;
+            background: white;
+            box-sizing: border-box;
+        }
+
+        .input-group input { width: 90px; }
+        .input-group select { width: 180px; padding: 5px; }
+
+        .input-group input:focus, .input-group select:focus {
+            border-color: var(--secondary-color);
+        }
+
+        .input-group input.correct, .input-group select.correct {
+            border-color: var(--accent-color);
+            background-color: #f0fdf4;
+        }
+
+        .input-group input.wrong, .input-group select.wrong {
+            border-color: #ef4444;
+            background-color: #fef2f2;
+        }
+
+        .progress-container {
+            width: 100%;
+            background-color: #e2e8f0;
+            border-radius: 10px;
+            height: 8px;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background-color: var(--secondary-color);
+            width: 0%;
+            transition: width 0.4s ease;
+        }
+
+        .quiz-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1.5rem;
+        }
+
+        .score-board {
+            font-weight: bold;
+            color: var(--text-color);
+        }
+
+        .nav-back {
+            position: absolute;
+            left: 20px;
+            top: 20px;
+            color: white;
+            text-decoration: none;
+            background-color: rgba(255, 255, 255, 0.15);
+            padding: 8px 15px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 14px;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-back:hover { background-color: rgba(255, 255, 255, 0.3); }
+        .sub-question-title {
+            color: #64748b;
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<header style="position: relative;">
+    <a href="index.html" class="nav-back">
+        <span>&#8592;</span> Terug naar overzicht
+    </a>
+    <h1>Chemische Bindingen & Oxidatiegetallen</h1>
+    <p>Oefen met ionvorming, het herkennen van bindingstypes en het bepalen van oxidatiegetallen.</p>
+</header>
+
+<main>
+    <div class="container">
+        <div class="progress-container">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+
+        <div class="sub-question-title" id="oefening-titel">Laden...</div>
+        <h2 id="oefening-omschrijving" style="margin-bottom: 0.5rem; color: var(--primary-color);">Laden...</h2>
+        <p id="oefening-subtekst" style="color: #64748b; margin-bottom: 1rem;"></p>
+
+        <div class="question-card" id="question-container"></div>
+
+        <div class="result-box" id="feedback-box">
+            Vul de juiste gegevens in en klik op 'Controleer'.
+        </div>
+
+        <div class="quiz-footer">
+            <div class="score-board" id="score-display">Score: 0/0</div>
+            <div>
+                <button id="check-btn" class="btn-primary" onclick="controleerAntwoord()">Controleer</button>
+                <button id="next-btn" style="display: none;" class="btn-primary" onclick="volgendeOefening()">Volgende Vraag &rarr;</button>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer>
+    <p>&copy; 2026 - Interactief Chemie Lab voor Leerlingen</p>
+</footer>
+
+<script>
+    // Database met oefeningen over Chemische Bindingen
+    const alleOefeningen = [
+        {
+            omschrijving: "Bepaal de elementaire deeltjes van dit ion.",
+            subtekst: "Let op! Een zwavelion (S²⁻) heeft een negatieve lading. Wat betekent dit voor het aantal elektronen?",
+            htmlTemplate: `
+                <div class="formula-display">S<sup>2&minus;</sup> (Z = 16, A = 32)</div>
+                <div class="input-grid">
+                    <div class="input-group">Protonen (p⁺)<input type="text" data-ans="16"></div>
+                    <div class="input-group">Neutronen (n⁰)<input type="text" data-ans="16"></div>
+                    <div class="input-group">Elektronen (e⁻)<input type="text" data-ans="18"></div>
+                </div>`
+        },
+        {
+            omschrijving: "Analyseer de binding in kaliumchloride (KCl).",
+            subtekst: "Is dit opgebouwd uit metalen, niet-metalen of een combinatie? Bepaal daarna het bindingstype en de oxidatiegetallen (gebruik Romeinse cijfers zoals +I, -I).",
+            htmlTemplate: `
+                <div class="formula-display">KCl</div>
+                <div class="input-grid">
+                    <div class="input-group">Type Binding
+                        <select data-ans="ionverbinding">
+                            <option value="">-- Kies binding --</option>
+                            <option value="ionverbinding">Ionverbinding</option>
+                            <option value="atoomverbinding">Atoomverbinding</option>
+                            <option value="metaalbinding">Metaalbinding</option>
+                        </select>
+                    </div>
+                    <div class="input-group">OG(K)<input type="text" placeholder="bv. +I" data-ans="+I"></div>
+                    <div class="input-group">OG(Cl)<input type="text" placeholder="bv. -I" data-ans="-I"></div>
+                </div>`
+        },
+        {
+            omschrijving: "Analyseer de binding in diwaterstofsulfide (H₂S).",
+            subtekst: "Waterstof en zwavel zijn beide niet-metalen. Vul het bindingstype en de oxidatiegetallen in (Romeinse cijfers).",
+            htmlTemplate: `
+                <div class="formula-display">H<sub>2</sub>S</div>
+                <div class="input-grid">
+                    <div class="input-group">Type Binding
+                        <select data-ans="atoomverbinding">
+                            <option value="">-- Kies binding --</option>
+                            <option value="ionverbinding">Ionverbinding</option>
+                            <option value="atoomverbinding">Atoomverbinding (Covalent)</option>
+                            <option value="metaalbinding">Metaalbinding</option>
+                        </select>
+                    </div>
+                    <div class="input-group">OG(H)<input type="text" placeholder="bv. +I" data-ans="+I"></div>
+                    <div class="input-group">OG(S)<input type="text" placeholder="bv. -II" data-ans="-II"></div>
+                </div>`
+        },
+        {
+            omschrijving: "Analyseer de binding in natriumoxide (Na₂O).",
+            subtekst: "Bepaal de binding tussen natrium (metaal) en zuurstof (niet-metaal) en geef de oxidatiegetallen.",
+            htmlTemplate: `
+                <div class="formula-display">Na<sub>2</sub>O</div>
+                <div class="input-grid">
+                    <div class="input-group">Type Binding
+                        <select data-ans="ionverbinding">
+                            <option value="">-- Kies binding --</option>
+                            <option value="ionverbinding">Ionverbinding</option>
+                            <option value="atoomverbinding">Atoomverbinding</option>
+                            <option value="metaalbinding">Metaalbinding</option>
+                        </select>
+                    </div>
+                    <div class="input-group">OG(Na)<input type="text" placeholder="bv. +I" data-ans="+I"></div>
+                    <div class="input-group">OG(O)<input type="text" placeholder="bv. -II" data-ans="-II"></div>
+                </div>`
+        },
+        {
+            omschrijving: "Analyseer deze enkelvoudige stof: stikstofgas (N₂).",
+            subtekst: "Wat is het oxidatiegetal van een element in een enkelvoudige stof? Gebruik Romeinse cijfers of 0.",
+            htmlTemplate: `
+                <div class="formula-display">N<sub>2</sub></div>
+                <div class="input-grid">
+                    <div class="input-group">Type Binding
+                        <select data-ans="atoomverbinding">
+                            <option value="">-- Kies binding --</option>
+                            <option value="ionverbinding">Ionverbinding</option>
+                            <option value="atoomverbinding">Atoomverbinding (Covalent)</option>
+                            <option value="metaalbinding">Metaalbinding</option>
+                        </select>
+                    </div>
+                    <div class="input-group">OG(N)<input type="text" placeholder="bv. 0" data-ans="0"></div>
+                </div>`
+        },
+        {
+            omschrijving: "Analyseer magnesiummetaal (Mg).",
+            subtekst: "Magnesium in zijn pure, ongebonden vorm.",
+            htmlTemplate: `
+                <div class="formula-display">Mg (metaal)</div>
+                <div class="input-grid">
+                    <div class="input-group">Type Binding
+                        <select data-ans="metaalbinding">
+                            <option value="">-- Kies binding --</option>
+                            <option value="ionverbinding">Ionverbinding</option>
+                            <option value="atoomverbinding">Atoomverbinding</option>
+                            <option value="metaalbinding">Metaalbinding</option>
+                        </select>
+                    </div>
+                    <div class="input-group">OG(Mg)<input type="text" placeholder="bv. 0" data-ans="0"></div>
+                </div>`
+        },
+        {
+            omschrijving: "Ionen vormen en de octetregel (Natrium).",
+            subtekst: "Een neutraal natriumatoom heeft configuratie K:2, L:8, M:1. Wat doet het om stabiel te worden?",
+            htmlTemplate: `
+                <div class="input-grid">
+                    <div class="input-group">Aantal e⁻ te veranderen
+                        <select data-ans="1">
+                            <option value="">-- Aantal --</option>
+                            <option value="1">1 elektron</option>
+                            <option value="2">2 elektronen</option>
+                            <option value="3">3 elektronen</option>
+                        </select>
+                    </div>
+                    <div class="input-group">Actie
+                        <select data-ans="afgeven">
+                            <option value="">-- Actie --</option>
+                            <option value="afgeven">Afgeven (doneren)</option>
+                            <option value="opnemen">Opnemen (accepteren)</option>
+                        </select>
+                    </div>
+                    <div class="input-group">Resulterende lading van Na-ion
+                        <input type="text" placeholder="bv. +1 of 1+" data-ans="+1">
+                    </div>
+                </div>`
+        },
+        {
+            omschrijving: "Ionen vormen en de octetregel (Fluor).",
+            subtekst: "Een neutraal fluoratoom heeft configuratie K:2, L:7. Wat gebeurt er bij de vorming van een fluoride-ion?",
+            htmlTemplate: `
+                <div class="input-grid">
+                    <div class="input-group">Aantal e⁻ te veranderen
+                        <select data-ans="1">
+                            <option value="">-- Aantal --</option>
+                            <option value="1">1 elektron</option>
+                            <option value="2">2 elektronen</option>
+                            <option value="3">3 elektronen</option>
+                        </select>
+                    </div>
+                    <div class="input-group">Actie
+                        <select data-ans="opnemen">
+                            <option value="">-- Actie --</option>
+                            <option value="afgeven">Afgeven (doneren)</option>
+                            <option value="opnemen">Opnemen (accepteren)</option>
+                        </select>
+                    </div>
+                    <div class="input-group">Resulterende lading van F-ion
+                        <input type="text" placeholder="bv. -1 of 1-" data-ans="-1">
+                    </div>
+                </div>`
+        }
+    ];
+
+    const AANTAL_VRAGEN_PER_SESVIE = 6;
+    let actieveOefeningen = [];
+    let huidigeIndex = 0;
+    let behaaldeScore = 0;
+
+    function husselMatrix(array) {
+        let m = array.length, t, i;
+        while (m) {
+            i = Math.floor(Math.random() * m--);
+            t = array[m];
+            array[m] = array[i];
+            array[i] = t;
+        }
+        return array;
+    }
+
+    function initialiseerQuiz() {
+        let geshuffeldePool = husselMatrix([...alleOefeningen]);
+        actieveOefeningen = geshuffeldePool.slice(0, AANTAL_VRAGEN_PER_SESVIE);
+        huidigeIndex = 0;
+        behaaldeScore = 0;
+        laadOefening();
+    }
+
+    function laadOefening() {
+        const oefening = actieveOefeningen[huidigeIndex];
+        
+        document.getElementById('oefening-titel').textContent = `Opgave ${huidigeIndex + 1} van ${actieveOefeningen.length}`;
+        document.getElementById('oefening-omschrijving').textContent = oefening.omschrijving;
+        document.getElementById('oefening-subtekst').textContent = oefening.subtekst;
+        document.getElementById('question-container').innerHTML = oefening.htmlTemplate;
+        
+        const feedbackBox = document.getElementById('feedback-box');
+        feedbackBox.textContent = "Vul de gegevens in en klik op 'Controleer'.";
+        feedbackBox.style.backgroundColor = "#f8fafc";
+        feedbackBox.style.borderLeftColor = "#cbd5e1";
+        
+        document.getElementById('check-btn').style.display = "inline-block";
+        document.getElementById('next-btn').style.display = "none";
+
+        const progPercentage = (huidigeIndex / actieveOefeningen.length) * 100;
+        document.getElementById('progress-bar').style.width = progPercentage + "%";
+        document.getElementById('score-display').textContent = `Score: ${behaaldeScore}/${actieveOefeningen.length}`;
+    }
+
+    function controleerAntwoord() {
+        const container = document.getElementById('question-container');
+        const inputs = container.querySelectorAll('input, select');
+        let allesCorrect = true;
+
+        inputs.forEach(input => {
+            const verwacht = input.getAttribute('data-ans').toLowerCase().replace(/\s+/g, '');
+            let ingevuld = input.value.toLowerCase().replace(/\s+/g, '');
+
+            // Ondersteun ook alternatieve ladingnotaties zoals 1- in plaats van -1
+            if (verwacht === "-1" && ingevuld === "1-") ingevuld = "-1";
+            if (verwacht === "+1" && ingevuld === "1+") ingevuld = "+1";
+
+            if (ingevuld === verwacht) {
+                input.classList.remove('wrong');
+                input.classList.add('correct');
+                input.disabled = true;
+            } else {
+                input.classList.remove('correct');
+                input.classList.add('wrong');
+                allesCorrect = false;
+            }
+        });
+
+        const feedbackBox = document.getElementById('feedback-box');
+        if (allesCorrect) {
+            behaaldeScore++;
+            feedbackBox.innerHTML = "<strong>🎉 Uitstekend!</strong> Alle bindingstypes, deeltjes en getallen kloppen.";
+            feedbackBox.style.backgroundColor = "#f0fdf4";
+            feedbackBox.style.borderLeftColor = "var(--accent-color)";
+            document.getElementById('check-btn').style.display = "none";
+            document.getElementById('next-btn').style.display = "inline-block";
+        } else {
+            feedbackBox.innerHTML = "<strong>❌ Nog niet correct.</strong> Kijk kritisch naar de rood-omrande vakjes en pas ze aan.";
+            feedbackBox.style.backgroundColor = "#fef2f2";
+            feedbackBox.style.borderLeftColor = "#ef4444";
+        }
+        
+        document.getElementById('score-display').textContent = `Score: ${behaaldeScore}/${actieveOefeningen.length}`;
+    }
+
+    function volgendeOefening() {
+        huidigeIndex++;
+        if (huidigeIndex < actieveOefeningen.length) {
+            laadOefening();
+        } else {
+            document.getElementById('progress-bar').style.width = "100%";
+            document.getElementById('oefening-titel').textContent = "Sessie afgerond!";
+            document.getElementById('oefening-omschrijving').textContent = "Knap gewerkt! Je bent klaar met deze reeks.";
+            document.getElementById('oefening-subtekst').textContent = "";
+            
+            const percentage = Math.round((behaaldeScore / actieveOefeningen.length) * 100);
+            document.getElementById('question-container').innerHTML = `
+                <div style="text-align:center; font-size: 1.5rem; color:var(--text-color); padding: 1rem 0;">
+                    🧪<br><br>
+                    Eindscore chemische bindingen: <strong>${behaaldeScore} / ${actieveOefeningen.length}</strong> (${percentage}%)
+                </div>`;
+            
+            const feedbackBox = document.getElementById('feedback-box');
+            feedbackBox.innerHTML = "Klik hieronder om een nieuwe willekeurige sessie te starten.";
+            feedbackBox.style.backgroundColor = "#eff6ff";
+            feedbackBox.style.borderLeftColor = "var(--secondary-color)";
+            
+            document.getElementById('next-btn').style.display = "none";
+            
+            const checkBtn = document.getElementById('check-btn');
+            checkBtn.style.display = "inline-block";
+            checkBtn.textContent = "Nieuwe Oefensessie ↻";
+            checkBtn.onclick = function() {
+                checkBtn.textContent = "Controleer";
+                checkBtn.onclick = controleerAntwoord;
+                initialiseerQuiz();
+            };
+        }
+    }
+
+    window.onload = initialiseerQuiz;
+</script>
+
+</body>
+</html>
