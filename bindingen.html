@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulatie: Chemische Bindingen (Uitgebreid)</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --metal-color: #95a5a6;
+            --nonmetal-color: #e67e22;
+            --bg-canvas: #f8f9fa;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f3f6;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            width: 100%;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            background: #fdfdfd;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        select, button {
+            padding: 10px 15px;
+            font-size: 15px;
+            border-radius: 6px;
+            border: 2px solid #cbd5e1;
+            outline: none;
+            background: white;
+        }
+
+        select:focus {
+            border-color: var(--accent);
+        }
+
+        button {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        .result-box {
+            background-color: #f1f5f9;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 5px solid var(--primary);
+            min-height: 80px;
+            line-height: 1.6;
+            font-size: 15px;
+        }
+
+        .animation-container {
+            width: 100%;
+            height: 480px;
+            border: 2px dashed #cbd5e1;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            background-color: var(--bg-canvas);
+        }
+
+        .atom {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            color: white;
+            transition: all 1.2s ease-in-out;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            z-index: 2;
+            font-size: 16px;
+        }
+
+        .atom span {
+            font-size: 11px;
+            font-weight: normal;
+            opacity: 0.9;
+            margin-top: 2px;
+        }
+
+        .atom.metal { background-color: var(--metal-color); }
+        .atom.nonmetal { background-color: var(--nonmetal-color); }
+
+        .electron {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            position: absolute;
+            z-index: 3;
+            box-shadow: 0 0 6px rgba(0,0,0,0.3);
+            transition: all 1.2s ease-in-out;
+            opacity: 0;
+        }
+
+        @keyframes vibrateShared {
+            0% { transform: translate(0, 0); }
+            50% { transform: translate(1px, -1px); }
+            100% { transform: translate(0, 0); }
+        }
+        .shared-vibe {
+            animation: vibrateShared 0.3s infinite linear;
+        }
+
+        @keyframes seaMove {
+            0% { transform: translate(0, 0); }
+            50% { transform: translate(20px, -15px); }
+            100% { transform: translate(0, 0); }
+        }
+        .sea-electron {
+            background-color: #f1c40f;
+            box-shadow: 0 0 8px #f1c40f;
+            animation: seaMove 2.5s infinite ease-in-out;
+            opacity: 1;
+        }
+
+        .charge-badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 12px;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Interactieve Simulatie: Chemische Bindingen</h1>
+    <p>Simuleer chemische interacties op basis van de wetten van de octetstructuur (Element 1 t/m 54).</p>
+</header>
+
+<div class="container">
+    <div class="controls">
+        <label for="element1">Element 1:</label>
+        <select id="element1"></select>
+
+        <label for="element2">Element 2:</label>
+        <select id="element2"></select>
+
+        <button onclick="startSimulatie()">Animeer Binding</button>
+    </div>
+
+    <div class="result-box" id="resultaat-tekst">
+        Kies twee elementen uit de lijst en klik op de knop om de reactie en de juiste atoomverhoudingen te bekijken.
+    </div>
+
+    <div class="animation-container" id="canvas"></div>
+</div>
+
+<script>
+    // Database van de eerste 54 elementen geïmporteerd uit de cursusdata
+    const elementenData = [
+        { num: 1, sym: "H", naam: "Waterstof", metal: false, val: 1 },
+        { num: 2, sym: "He", naam: "Helium", metal: false, val: 0 },
+        { num: 3, sym: "Li", naam: "Lithium", metal: true, val: 1 },
+        { num: 4, sym: "Be", naam: "Beryllium", metal: true, val: 2 },
+        { num: 5, sym: "B", naam: "Boor", metal: false, val: 3 },
+        { num: 6, sym: "C", naam: "Koolstof", metal: false, val: 4 },
+        { num: 7, sym: "N", naam: "Stikstof", metal: false, val: 5 },
+        { num: 8, sym: "O", naam: "Zuurstof", metal: false, val: 6 },
+        { num: 9, sym: "F", naam: "Fluor", metal: false, val: 7 },
+        { num: 10, sym: "Ne", naam: "Neon", metal: false, val: 0 },
+        { num: 11, sym: "Na", naam: "Natrium", metal: true, val: 1 },
+        { num: 12, sym: "Mg", naam: "Magnesium", metal: true, val: 2 },
+        { num: 13, sym: "Al", naam: "Aluminium", metal: true, val: 3 },
+        { num: 14, sym: "Si", naam: "Silicium", metal: true, val: 4 },
+        { num: 15, sym: "P", naam: "Fosfor", metal: false, val: 5 },
+        { num: 16, sym: "S", naam: "Zwavel", metal: false, val: 6 },
+        { num: 17, sym: "Cl", naam: "Chloor", metal: false, val: 7 },
+        { num: 18, sym: "Ar", naam: "Argon", metal: false, val: 0 },
+        { num: 19, sym: "K", naam: "Kalium", metal: true, val: 1 },
+        { num: 20, sym: "Ca", naam: "Calcium", metal: true, val: 2 },
+        { num: 21, sym: "Sc", naam: "Scandium", metal: true, val: 3 },
+        { num: 22, sym: "Ti", naam: "Titaan", metal: true, val: 4 },
+        { num: 23, sym: "V", naam: "Vanadium", metal: true, val: 5 },
+        { num: 24, sym: "Cr", naam: "Chroom", metal: true, val: 6 },
+        { num: 25, sym: "Mn", naam: "Mangaan", metal: true, val: 7 },
+        { num: 26, sym: "Fe", naam: "IJzer", metal: true, val: 8 },
+        { num: 27, sym: "Co", naam: "Kobalt", metal: true, val: 9 },
+        { num: 28, sym: "Ni", naam: "Nikkel", metal: true, val: 0 },
+        { num: 29, sym: "Cu", naam: "Koper", metal: true, val: 1 },
+        { num: 30, sym: "Zn", naam: "Zink", metal: true, val: 2 },
+        { num: 31, sym: "Ga", naam: "Gallium", metal: true, val: 3 },
+        { num: 32, sym: "Ge", naam: "Germanium", metal: true, val: 4 },
+        { num: 33, sym: "As", naam: "Arseen", metal: true, val: 5 },
+        { num: 34, sym: "Se", naam: "Seleen", metal: false, val: 6 },
+        { num: 35, sym: "Br", naam: "Broom", metal: false, val: 7 },
+        { num: 36, sym: "Kr", naam: "Krypton", metal: false, val: 0 },
+        { num: 37, sym: "Rb", naam: "Rubidium", metal: true, val: 1 },
+        { num: 38, sym: "Sr", naam: "Strontium", metal: true, val: 2 },
+        { num: 39, sym: "Y", naam: "Yttrium", metal: true, val: 3 },
+        { num: 40, sym: "Zr", naam: "Zirkoon", metal: true, val: 4 },
+        { num: 41, sym: "Nb", naam: "Niobium", metal: true, val: 5 },
+        { num: 42, sym: "Mo", naam: "Molybdeen", metal: true, val: 6 },
+        { num: 43, sym: "Tc", naam: "Technetium", metal: true, val: 7 },
+        { num: 44, sym: "Ru", naam: "Ruthenium", metal: true, val: 8 },
+        { num: 45, sym: "Rh", naam: "Rodium", metal: true, val: 9 },
+        { num: 46, sym: "Pd", naam: "Palladium", metal: true, val: 0 },
+        { num: 47, sym: "Ag", naam: "Zilver", metal: true, val: 1 },
+        { num: 48, sym: "Cd", naam: "Cadmium", metal: true, val: 2 },
+        { num: 49, sym: "In", naam: "Indium", metal: true, val: 3 },
+        { num: 50, sym: "Sn", naam: "Tin", metal: true, val: 4 },
+        { num: 51, sym: "Sb", naam: "Antimoon", metal: true, val: 5 },
+        { num: 52, sym: "Te", naam: "Telluur", metal: true, val: 6 },
+        { num: 53, sym: "I", naam: "Jood", metal: false, val: 7 },
+        { num: 54, sym: "Xe", naam: "Xenon", metal: false, val: 0 }
+    ];
+
+    // Kleurenschema voor opeenvolgende elektronenparen (1e = geel, 2e = cyaan, 3e = roze)
+    const paarKleuren = ['#f1c40f', '#00cec9', '#fd79a8'];
+
+    // Bereken Grootste Gemene Deler voor verhoudingen
+    function gcd(a, b) {
+        return b ? gcd(b, a % b) : a;
+    }
+
+    // Initialiseer dropdowns
+    window.onload = function() {
+        const s1 = document.getElementById('element1');
+        const s2 = document.getElementById('element2');
+        elementenData.forEach((el, index) => {
+            let opt1 = document.createElement('option');
+            opt1.value = index;
+            opt1.textContent = `${el.num}. ${el.naam} (${el.sym})`;
+            let opt2 = opt1.cloneNode(true);
+            s1.appendChild(opt1);
+            s2.appendChild(opt2);
+        });
+        // Standaard selectie instellen (H en O)
+        s1.value = 0; // H
+        s2.value = 7; // O
+    };
+
+    function getChemicalProps(el) {
+        let needs = 0;
+        let gives = 0;
+        if (!el.metal) {
+            if (el.sym === 'H') needs = 1;
+            else if (el.val === 0) needs = 0;
+            else needs = 8 - el.val;
+        } else {
+            // Didactische vereenvoudiging overgangsmetalen naar meest stabiele ionlading (+2 of +3)
+            if (el.val > 0 && el.val <= 3) gives = el.val;
+            else if (el.val === 4) gives = 4;
+            else gives = 2; 
+        }
+        return { needs, gives };
+    }
+
+    function startSimulatie() {
+        const el1 = elementenData[document.getElementById('element1').value];
+        const el2 = elementenData[document.getElementById('element2').value];
+        const canvas = document.getElementById('canvas');
+        const resultBox = document.getElementById('resultaat-tekst');
+        
+        canvas.innerHTML = ''; 
+
+        // Uitzondering: Edelgassen
+        if (el1.val === 0 || el2.val === 0) {
+            resultBox.innerHTML = `<strong>Geen Binding mogelijk (Edelgas)</strong><br>
+            Een van de geselecteerde elementen is een edelgas. Deze hebben al een stabiele octetstructuur (of duet) in hun buitenste schil en gaan geen bindingen aan.`;
+            renderInert(el1, el2, canvas);
+            return;
+        }
+
+        const props1 = getChemicalProps(el1);
+        const props2 = getChemicalProps(el2);
+
+        if (el1.metal !== el2.metal) {
+            // Ionbinding
+            const metal = el1.metal ? el1 : el2;
+            const nonmetal = el1.metal ? el2 : el1;
+            const mProps = getChemicalProps(metal);
+            const nProps = getChemicalProps(nonmetal);
+            
+            toonIonbinding(metal, nonmetal, mProps, nProps, canvas, resultBox);
+        } else if (!el1.metal && !el2.metal) {
+            // Covalente binding
+            toonCovalenteBinding(el1, el2, props1, props2, canvas, resultBox);
+        } else {
+            // Metaalbinding
+            toonMetaalbinding(el1, el2, props1, props2, canvas, resultBox);
+        }
+    }
+
+    function renderInert(el1, el2, canvas) {
+        const atom1 = createAtomDiv(el1, 250, 200);
+        const atom2 = createAtomDiv(el2, 510, 200);
+        canvas.appendChild(atom1);
+        canvas.appendChild(atom2);
+    }
+
+    function createAtomDiv(el, x, y) {
+        const div = document.createElement('div');
+        div.className = `atom ${el.metal ? 'metal' : 'nonmetal'}`;
+        div.style.left = x + 'px';
+        div.style.top = y + 'px';
+        div.innerHTML = `${el.sym}<span>val: ${el.val}</span>`;
+        return div;
+    }
+
+    function toonIonbinding(metal, nonmetal, mProps, nProps, canvas, resultBox) {
+        const g = gcd(mProps.gives, nProps.needs);
+        const countM = nProps.needs / g;
+        const countN = mProps.gives / g;
+
+        // FOUT HERSTELD: Hier is .name veranderd naar .naam
+        resultBox.innerHTML = `<strong>Type Binding: Ionbinding (Metaal + Niet-metaal)</strong><br>
+        Om de stabiele edelgasconfiguratie te bereiken, moeten er <strong>${countM}</strong> atoom/atomen <strong>${metal.naam}</strong> 
+        en <strong>${countN}</strong> atoom/atomen <strong>${nonmetal.naam}</strong> reageren.<br>
+        <strong>Brutoformule:</strong> ${metal.sym}${countM > 1 ? `<sub>${countM}</sub>` : ''}${nonmetal.sym}${countN > 1 ? `<sub>${countN}</sub>` : ''}<br>
+        <em>Elektronen worden volledig overgedragen van het metaal naar het niet-metaal, waardoor ionen ontstaan.</em>`;
+
+        const metalAtoms = [];
+        const nonmetalAtoms = [];
+
+        // Teken metalen (links)
+        for(let i=0; i<countM; i++) {
+            const y = 200 - ((countM-1)*55) + (i*110);
+            const atom = createAtomDiv(metal, 120, y);
+            canvas.appendChild(atom);
+            metalAtoms.push({div: atom, x: 120, y: y});
+        }
+
+        // Teken niet-metalen (rechts)
+        for(let i=0; i<countN; i++) {
+            const y = 200 - ((countN-1)*55) + (i*110);
+            const atom = createAtomDiv(nonmetal, 560, y);
+            canvas.appendChild(atom);
+            nonmetalAtoms.push({div: atom, x: 560, y: y});
+        }
+
+        // Genereer en verplaats elektronen per metaal-atoom
+        let targetIndex = 0;
+        let targetVacancy = 0;
+
+        metalAtoms.forEach((m) => {
+            for(let e=0; e<mProps.gives; e++) {
+                const elDiv = document.createElement('div');
+                elDiv.className = 'electron';
+                elDiv.style.backgroundColor = '#f1c40f';
+                elDiv.style.boxShadow = '0 0 6px #f1c40f';
+                elDiv.style.left = (m.x + 65) + 'px';
+                elDiv.style.top = (m.y + 20 + (e*12)) + 'px';
+                elDiv.style.opacity = 1;
+                canvas.appendChild(elDiv);
+
+                // Bepaal naar welk niet-metaalatoom dit elektron vliegt
+                const target = nonmetalAtoms[targetIndex];
+                
+                setTimeout(() => {
+                    elDiv.style.left = (target.x + 5) + 'px';
+                    elDiv.style.top = (target.y + 15 + (targetVacancy*10)) + 'px';
+                }, 400 + (e*150));
+
+                setTimeout(() => { elDiv.style.opacity = 0; }, 2000);
+
+                targetVacancy++;
+                if (targetVacancy >= nProps.needs) {
+                    targetVacancy = 0;
+                    targetIndex++;
+                }
+            }
+        });
+
+        // Na overdracht: Ionen vormen en trekken elkaar aan
+        setTimeout(() => {
+            metalAtoms.forEach(m => {
+                m.div.innerHTML += `<div class="charge-badge" style="background:#e74c3c;">+${mProps.gives}</div>`;
+                m.div.style.left = (m.x + 100) + 'px';
+            });
+            nonmetalAtoms.forEach(n => {
+                n.div.innerHTML += `<div class="charge-badge" style="background:#3498db;">-${nProps.needs}</div>`;
+                n.div.style.left = (n.x - 100) + 'px';
+            });
+        }, 2200);
+    }
+
+    function toonCovalenteBinding(el1, el2, p1, p2, canvas, resultBox) {
+        let count1, count2;
+        
+        if (el1.num === el2.num) {
+            count1 = 1;
+            count2 = 1;
+        } else {
+            const g = gcd(p1.needs, p2.needs);
+            count1 = p2.needs / g;
+            count2 = p1.needs / g;
+        }
+
+        // Bepaal centrale atoom (degene met kleinste aantal, of hoogste nood)
+        let central, outer, cCount, oCount, cNeeds, oNeeds;
+        if (count1 <= count2) {
+            central = el1; cCount = count1; cNeeds = p1.needs;
+            outer = el2; oCount = count2; oNeeds = p2.needs;
+        } else {
+            central = el2; cCount = count2; cNeeds = p2.needs;
+            outer = el1; oCount = count1; oNeeds = p1.needs;
+        }
+
+        // Bereken hoeveel bindingen er per buitenste atoom liggen
+        const bindingenPerAtoom = oNeeds;
+
+        resultBox.innerHTML = `<strong>Type Binding: Covalente binding / Atoombinding (Niet-metaal + Niet-metaal)</strong><br>
+        Beide elementen eisen elektronen op. Ze gaan elektronen <strong>delen</strong> in gemeenschappelijke elektronenparen.<br>
+        <strong>Brutoformule:</strong> ${central.sym}${cCount > 1 ? `<sub>${cCount}</sub>` : ''}${outer.sym}${oCount > 1 ? `<sub>${oCount}</sub>` : ''}<br>
+        <em>Tussen het centrale atoom en elk buitenste atoom worden <strong>${bindingenPerAtoom}</strong> elektronenparen gevormd. Elk paar heeft een eigen kleur gekregen.</em>`;
+
+        const centralAtoms = [];
+        const outerAtoms = [];
+
+        // Layout coördinaten bepalen voor centrale atoom (midden)
+        const cx = 380, cy = 200;
+        const cAtom = createAtomDiv(central, cx, cy);
+        canvas.appendChild(cAtom);
+        centralAtoms.push({x: cx, y: cy});
+
+        // Buitenste atomen symmetrisch rondom plaatsen
+        const posities = [
+            {x: cx + 160, y: cy},       // Rechts
+            {x: cx - 160, y: cy},       // Links
+            {x: cx,       y: cy - 130}, // Boven
+            {x: cx,       y: cy + 130}  // Onder
+        ];
+
+        for(let i=0; i<oCount; i++) {
+            if (i >= posities.length) break; // Veiligheidscap voor weergave
+            const pos = posities[i];
+            const oAtom = createAtomDiv(outer, pos.x, pos.y);
+            canvas.appendChild(oAtom);
+            outerAtoms.push({div: oAtom, origX: pos.x, origY: pos.y, targetX: cx + (pos.x - cx)*0.62, targetY: cy + (pos.y - cy)*0.62});
+        }
+
+        // Animatie: Atomen schuiven naar elkaar toe voor overlap
+        setTimeout(() => {
+            outerAtoms.forEach(o => {
+                o.div.style.left = o.targetX + 'px';
+                o.div.style.top = o.targetY + 'px';
+            });
+        }, 400);
+
+        // Gedeelde elektronenparen exact in de overlapzones genereren
+        setTimeout(() => {
+            outerAtoms.forEach(o => {
+                // Bereken exacte midden tussen kernen
+                const midX = (cx + o.targetX) / 2 + 33; 
+                const midY = (cy + o.targetY) / 2 + 33;
+
+                // Loop over het aantal bindingen (paren) tussen deze twee specifieke partners
+                for(let b=0; b<bindingenPerAtoom; b++) {
+                    const kleur = paarKleuren[b % paarKleuren.length];
+                    const offset = (b - (bindingenPerAtoom - 1) / 2) * 20; // Verschuif opeenvolgende paren verticaal/horizontaal
+
+                    let xPos = midX;
+                    let yPos = midY;
+
+                    if (Math.abs(o.targetX - cx) > Math.abs(o.targetY - cy)) {
+                        // Horizontale binding: stapel paren verticaal
+                        yPos += offset;
+                        // Teken de 2 elektronen van het paar vlak naast elkaar
+                        createSharedElectron(xPos - 7, yPos, kleur, canvas);
+                        createSharedElectron(xPos + 7, yPos, kleur, canvas);
+                    } else {
+                        // Verticale binding: stapel paren horizontaal
+                        xPos += offset;
+                        createSharedElectron(xPos, yPos - 7, kleur, canvas);
+                        createSharedElectron(xPos, yPos + 7, kleur, canvas);
+                    }
+                }
+            });
+        }, 1600);
+    }
+
+    function createSharedElectron(x, y, color, canvas) {
+        const e = document.createElement('div');
+        e.className = 'electron shared-vibe';
+        e.style.left = x + 'px';
+        e.style.top = y + 'px';
+        e.style.backgroundColor = color;
+        e.style.boxShadow = `0 0 8px ${color}`;
+        e.style.opacity = 1;
+        canvas.appendChild(e);
+    }
+
+    function toonMetaalbinding(el1, el2, p1, p2, canvas, resultBox) {
+        // FOUT HERSTELD: Hier is .name veranderd naar .naam
+        resultBox.innerHTML = `<strong>Type Binding: Metaalbinding (Metaal + Metaal)</strong><br>
+        Beide elementen (<strong>${el1.naam}</strong> en <strong>${el2.naam}</strong>) zijn metalen. Ze laten hun buitenste elektronen los. 
+        Er vormt zich een georganiseerd <strong>metaalrooster</strong> van positief geladen metaalrompen, bijeengehouden door een 
+        gemeenschappelijke, vloeibare <strong>'zee van vrije elektronen'</strong>.`;
+
+        const posities = [
+            {l: 160, t: 90},  {l: 360, t: 90},  {l: 560, t: 90},
+            {l: 160, t: 220}, {l: 360, t: 220}, {l: 560, t: 220},
+            {l: 160, t: 350}, {l: 360, t: 350}, {l: 560, t: 350}
+        ];
+
+        posities.forEach((pos, index) => {
+            const actueelEl = (index % 2 === 0) ? el1 : el2;
+            const props = getChemicalProps(actueelEl);
+            const atom = document.createElement('div');
+            atom.className = 'atom metal';
+            atom.style.left = pos.l + 'px';
+            atom.style.top = pos.t + 'px';
+            atom.style.width = '70px';
+            atom.style.height = '70px';
+            atom.innerHTML = actueelEl.sym;
+            atom.innerHTML += `<div class="charge-badge" style="background:#e74c3c; top:-5px; right:-5px; width:20px; height:20px; font-size:10px;">+${props.gives}</div>`;
+            canvas.appendChild(atom);
+        });
+
+        // Genereer de elektronenwolk (zee)
+        const aantalElektronen = (p1.gives + p2.gives) * 3;
+        for(let i=0; i<aantalElektronen; i++) {
+            const e = document.createElement('div');
+            e.className = 'electron sea-electron';
+            e.style.left = (180 + Math.random() * 410) + 'px';
+            e.style.top = (100 + Math.random() * 270) + 'px';
+            e.style.animationDelay = (Math.random() * 2) + 's';
+            canvas.appendChild(e);
+        }
+    }
+</script>
+
+</body>
+</html>
