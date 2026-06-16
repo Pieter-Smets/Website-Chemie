@@ -197,3 +197,31 @@ footer {
     padding: 1.5rem;
     margin-top: auto;
 }
+
+footer img {
+    vertical-align: middle;
+    display: inline-block;
+    position: relative;
+    top: -1px; /* Fijnafstelling voor het oog */
+    /*filter: brightness(0) invert(1);*/
+    /*opacity: 0.8; /* Maakt het iets subtieler */
+}
+
+footer a {
+    color: var(--secondary-color, #38bdf8); /* Of een lichte kleur die past bij jouw palet */
+    text-decoration: none;
+    border-bottom: 1px dashed transparent;
+    transition: all 0.2s ease;
+}
+
+footer a:hover {
+    color: #ffffff;
+    border-bottom-style: solid;
+    border-bottom-color: currentColor;
+}
+
+footer p, footer {
+    line-height: 1.6;
+    font-size: 0.85rem; /* Iets kleiner dan normale tekst staat vaak netter in de footer */
+    color: #94a3b8; /* Subtiel grijs in plaats van hard wit */
+}
