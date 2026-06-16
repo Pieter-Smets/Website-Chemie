@@ -200,7 +200,7 @@
 <main class="container">
     <div class="calc-card">
         <h2>1. Voer de chemische formule in</h2>
-        <p style="color: #64748b; margin-bottom: 1rem;">Typ een geldige formule (bv. <code>HCl</code>, <code>NaOH</code>, <code>CH3COOH</code>, <code>NH3</code> of <code>H2O</code>). Let op hoofdletters!</p>
+        <p style="color: #64748b; margin-bottom: 1rem;">Typ een geldige formule (bv. <code>HCl</code>, <code>Ca(OH)2</code>, <code>CH3COOH</code>, of <code>H3PO4</code>). Let op hoofdletters!</p>
         
         <div class="input-inline">
             <input type="text" id="formula-input" placeholder="bv. HCl" style="text-transform: none;">
@@ -286,7 +286,7 @@
 </footer>
 
 <script>
-   const atoommassaDatabase = {
+    const atoommassaDatabase = {
         "H": 1.008, "He": 4.003, "Li": 6.941, "Be": 9.012, "B": 10.811, "C": 12.011,
         "N": 14.007, "O": 15.999, "F": 18.998, "Ne": 20.180, "Na": 22.990, "Mg": 24.305,
         "Al": 26.982, "Si": 28.085, "P": 30.974, "S": 32.065, "Cl": 35.45, "Ar": 39.948,
@@ -309,17 +309,45 @@
         "Mc": 288.000, "Lv": 293.000, "Ts": 294.000, "Og": 294.000
     };
 
+    // MASSAAL UITGEBREIDE DATABANK voor de Rekenmodule
     const bekendeStoffenPortaal = {
+        // Sterke zuren
         "HCl": { naam: "Waterstofchloride (Zoutzuur)", karakter: "sterk_zuur" },
         "HNO3": { naam: "Salpeterzuur", karakter: "sterk_zuur" },
-        "H2SO4": { naam: "Zwavelzuur", karakter: "sterk_zuur_di" },
+        "HBr": { naam: "Waterstofbromide", karakter: "sterk_zuur" },
+        "HI": { naam: "Waterstofjodide", karakter: "sterk_zuur" },
+        "HClO4": { naam: "Perchloorzuur", karakter: "sterk_zuur" },
+        "H2SO4": { naam: "Zwavelzuur", karakter: "sterk_zuur_di" }, // Tweewaardig sterk zuur
+        
+        // Zwakke zuren
         "CH3COOH": { naam: "Azijnzuur (Ethaanzuur)", karakter: "zwak_zuur", pka: 4.75 },
-        "H2CO3": { naam: "Koolzuur", karakter: "zwak_zuur", pka: 6.37 },
-        "NaOH": { naam: "Natriumhydroxide (Bijtende soda)", karakter: "sterke_base" },
+        "H2CO3": { naam: "Koolzuur", karakter: "zwak_zuur", pka: 6.35 },
+        "H3PO4": { naam: "Fosforzuur", karakter: "zwak_zuur", pka: 2.15 },
+        "HF": { naam: "Waterstoffluoride", karakter: "zwak_zuur", pka: 3.17 },
+        "HNO2": { naam: "Salpeterigzuur", karakter: "zwak_zuur", pka: 3.39 },
+        "H2S": { naam: "Waterstofsulfide", karakter: "zwak_zuur", pka: 7.00 },
+        "HCN": { naam: "Waterstofcyanide (Blauwzuur)", karakter: "zwak_zuur", pka: 9.21 },
+        "HCOOH": { naam: "Mierenzuur (Methaanzuur)", karakter: "zwak_zuur", pka: 3.75 },
+        
+        // Sterke basen
+        "NaOH": { naam: "Natriumhydroxide", karakter: "sterke_base" },
         "KOH": { naam: "Kaliumhydroxide", karakter: "sterke_base" },
+        "LiOH": { naam: "Lithiumhydroxide", karakter: "sterke_base" },
+        "Ca(OH)2": { naam: "Calciumhydroxide", karakter: "sterke_base_di" }, // Tweewaardig sterke base
+        "Ba(OH)2": { naam: "Bariumhydroxide", karakter: "sterke_base_di" },
+
+        // Zwakke basen
         "NH3": { naam: "Ammoniak", karakter: "zwakke_base", pkb: 4.75 },
+        "CH3NH2": { naam: "Methylamine", karakter: "zwakke_base", pkb: 3.36 },
+
+        // Neutrale zouten / stoffen
         "H2O": { naam: "Water", karakter: "neutraal" },
-        "NaCl": { naam: "Natriumchloride (Keukenzout)", karakter: "neutraal_zout" }
+        "NaCl": { naam: "Natriumchloride", karakter: "neutraal_zout" },
+        "KCl": { naam: "Kaliumchloride", karakter: "neutraal_zout" },
+        "NaNO3": { naam: "Natriumnitraat", karakter: "neutraal_zout" },
+        "KNO3": { naam: "Kaliumnitraat", karakter: "neutraal_zout" },
+        "Na2SO4": { naam: "Natriumsulfaat", karakter: "neutraal_zout" },
+        "CaCl2": { naam: "Calciumchloride", karakter: "neutraal_zout" }
     };
 
     let berekendeMolaireMassa = 0;
@@ -332,31 +360,28 @@
         return parseFloat(veldWaarde);
     }
 
-    // NIEUW: Geoptimaliseerde live koppeling met de PubChem API
-    // NIEUW: Slimmere live koppeling met de PubChem API (zoekt op synoniem én formule)
+    // PubChem API: Haalt gevaren, algemene pH, en nu ook pKa (Dissociation Constants) op
     async function haalPubChemDataOp(formule) {
         let cid = null;
         
         try {
-            // STAP 1A: Zoek eerst of PubChem de formule herkent als "naam/synoniem" 
-            // (Dit werkt perfect voor genoteerde formules zoals CH3COOH of NaOH)
+            // Zoek op naam/synoniem
             let cidUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/${encodeURIComponent(formule)}/cids/JSON`;
             let cidResponse = await fetch(cidUrl);
             
-            // STAP 1B: Als dat mislukt, zoek dan strikt als "formule" (Hill-systeem)
+            // Val terug op de formule
             if (!cidResponse.ok) {
                 cidUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/formula/${encodeURIComponent(formule)}/cids/JSON`;
                 cidResponse = await fetch(cidUrl);
             }
 
-            if (!cidResponse.ok) return null; // Stof echt niet gevonden
+            if (!cidResponse.ok) return null;
             
             const cidData = await cidResponse.json();
             if (!cidData.IdentifierList || !cidData.IdentifierList.CID || cidData.IdentifierList.CID.length === 0) return null;
             
-            cid = cidData.IdentifierList.CID[0]; // Pak het hoofd-ID (CID)
+            cid = cidData.IdentifierList.CID[0];
 
-            // Stap 2: Haal de officiële stofnaam op
             const propUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/${cid}/property/Title/JSON`;
             const propResponse = await fetch(propUrl);
             let EngelseNaam = "";
@@ -367,7 +392,6 @@
                 }
             }
 
-            // Stap 3: Haal GHS Veiligheidsinformatie en pH op uit de PubChem View API
             const viewUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/data/compound/${cid}/JSON`;
             const viewResponse = await fetch(viewUrl);
             
@@ -375,11 +399,11 @@
             let pZinnen = [];
             let pictograms = [];
             let phInfo = "";
+            let pkaInfo = ""; // Nieuw: pKa info uit PubChem
 
             if (viewResponse.ok) {
                 const viewData = await viewResponse.json();
                 
-                // Recursieve helperfunctie om secties te scannen
                 function vindSectie(node, heading) {
                     if (!node) return null;
                     if (node.TOCHeading === heading) return node;
@@ -426,6 +450,7 @@
                     scanGHS(ghsSectie);
                 }
 
+                // Haal pH tekst op
                 const phSectie = vindSectie(root, "pH");
                 if (phSectie && phSectie.Information) {
                     let phStrings = [];
@@ -438,6 +463,20 @@
                     });
                     if (phStrings.length > 0) phInfo = phStrings.join(" | ");
                 }
+
+                // NIEUW: Haal pKa / Dissociation Constants tekst op
+                const pkaSectie = vindSectie(root, "Dissociation Constants");
+                if (pkaSectie && pkaSectie.Information) {
+                    let pkaStrings = [];
+                    pkaSectie.Information.forEach(info => {
+                        if (info.Value && info.Value.StringWithMarkup) {
+                            info.Value.StringWithMarkup.forEach(s => {
+                                if (s.String) pkaStrings.push(s.String);
+                            });
+                        }
+                    });
+                    if (pkaStrings.length > 0) pkaInfo = pkaStrings.join(" | ");
+                }
             }
 
             return {
@@ -446,7 +485,8 @@
                 hZinnen: hZinnen.slice(0, 4),
                 pZinnen: pZinnen.slice(0, 4),
                 pictograms: pictograms,
-                phInfo: phInfo
+                phInfo: phInfo,
+                pkaInfo: pkaInfo
             };
 
         } catch (fout) {
@@ -457,23 +497,50 @@
 
     function parseFormule(formule) {
         let cleanFormule = formule.replace(/\s+/g, '');
+        // Sta complexe structuren met haakjes (zoals Ca(OH)2) toe
         cleanFormule = cleanFormule.replace(/([A-Z][a-z]?)(0)/g, '$1O');
         
-        const regex = /([A-Z][a-z]?)([0-9]*)/g;
+        // Let op: deze simpele regex is nu vergevingsgezinder voor haken in de string
+        const regex = /([A-Z][a-z]?|\(|\))([0-9]*)/g;
         let match;
         let totaleMassa = 0;
         let elementenLijst = [];
         let isGeldig = true;
         let teller = 0;
+        let multiplierStack = [1];
 
         if (!cleanFormule) return null;
 
-        while ((match = regex.exec(cleanFormule)) !== null) {
-            teller += match[0].length;
-            const symbool = match[1];
-            const aantal = match[2] ? parseInt(match[2]) : 1;
+        // Voor de Breakdown UI weergave maken we het iets eenvoudiger en tellen we pure elementen
+        const simpeleRegex = /([A-Z][a-z]?)([0-9]*)/g;
+        let simpeleMatch;
+        let atoomTeller = {};
 
-            if (atoommassaDatabase[symbool]) {
+        // Hacky maar snelle manier om haakjes te verwerken voor de totale massa
+        try {
+            // Zeer simplistische haakjes verwerking voor massa berekening
+            let tempFormule = cleanFormule;
+            while (tempFormule.includes('(')) {
+                tempFormule = tempFormule.replace(/\(([A-Za-z0-9]+)\)([0-9]+)/g, (match, inner, num) => {
+                    let expanded = '';
+                    for (let i=0; i<parseInt(num); i++) expanded += inner;
+                    return expanded;
+                });
+            }
+            
+            while ((simpeleMatch = simpeleRegex.exec(tempFormule)) !== null) {
+                const symbool = simpeleMatch[1];
+                const aantal = simpeleMatch[2] ? parseInt(simpeleMatch[2]) : 1;
+                
+                if (atoommassaDatabase[symbool]) {
+                    if(!atoomTeller[symbool]) atoomTeller[symbool] = 0;
+                    atoomTeller[symbool] += aantal;
+                } else {
+                    isGeldig = false;
+                }
+            }
+
+            for (const [symbool, aantal] of Object.entries(atoomTeller)) {
                 const elementMassa = atoommassaDatabase[symbool] * aantal;
                 totaleMassa += elementMassa;
                 elementenLijst.push({
@@ -482,11 +549,10 @@
                     massaPerStuk: atoommassaDatabase[symbool],
                     totaleElementMassa: elementMassa
                 });
-            } else {
-                isGeldig = false;
             }
+        } catch (e) {
+            isGeldig = false;
         }
-        if (teller !== cleanFormule.length) isGeldig = false;
 
         return {
             isGeldig: isGeldig && elementenLijst.length > 0,
@@ -522,7 +588,6 @@
                 breakdownUl.appendChild(li);
             });
 
-            // Toon vast het laadscherm voor PubChem data
             infoName.innerHTML = `⏳ Live gegevens ophalen uit PubChem...`;
             infoType.innerHTML = "Even geduld, we zoeken gevarensymbolen, H/P-zinnen en de officiële naam op.";
             infoWiki.style.display = "none"; 
@@ -531,12 +596,10 @@
             infoCard.style.display = 'block';
             warning.style.display = 'none';
 
-            // Haal de live data op via onze nieuwe PubChem koppeling
             const pubChemData = await haalPubChemDataOp(actieveFormuleString);
             
             infoWiki.style.display = "inline-block"; 
 
-            // Kijk of de stof lokaal gecategoriseerd is voor pH doeleinden
             let lokaalKarakterTekst = "";
             if (bekendeStoffenPortaal[actieveFormuleString]) {
                 const stof = bekendeStoffenPortaal[actieveFormuleString];
@@ -551,15 +614,19 @@
                 const mooieNaam = pubChemData.naam ? pubChemData.naam.charAt(0).toUpperCase() + pubChemData.naam.slice(1) : actieveFormuleString;
                 infoName.innerHTML = `🔬 ${mooieNaam}`;
                 
-                // Bouw uitgebreide PubChem gevarenkaart HTML op
                 let infoHtml = `<strong>Formule:</strong> ${actieveFormuleString} | <strong>PubChem CID:</strong> ${pubChemData.cid}${lokaalKarakterTekst}<br>`;
                 
-                // Toon experimentele pH als PubChem die heeft
                 if (pubChemData.phInfo) {
                     infoHtml += `<span style="display:inline-block; margin-top:5px;">ℹ️ <strong>PubChem pH info:</strong> <em>${pubChemData.phInfo}</em></span><br>`;
                 }
+
+                // NIEUW: Toon de pKa waarden uit PubChem!
+                if (pubChemData.pkaInfo) {
+                    // Knip lange teksten af om de layout netjes te houden
+                    let shortPka = pubChemData.pkaInfo.length > 150 ? pubChemData.pkaInfo.substring(0, 150) + "..." : pubChemData.pkaInfo;
+                    infoHtml += `<span style="display:inline-block; margin-top:5px; color: #b45309;">📉 <strong>Zuurconstante (pKa) info:</strong> <em>${shortPka}</em></span><br>`;
+                }
                 
-                // Voeg GHS Gevarensymbolen toe (indien aanwezig)
                 if (pubChemData.pictograms.length > 0) {
                     infoHtml += `<div style="margin: 12px 0 8px 0; display: flex; gap: 8px; flex-wrap: wrap;">`;
                     pubChemData.pictograms.forEach(url => {
@@ -568,7 +635,6 @@
                     infoHtml += `</div>`;
                 }
                 
-                // Voeg H-zinnen toe
                 if (pubChemData.hZinnen.length > 0) {
                     infoHtml += `<div style="margin-top: 8px;"><strong>⚠️ Gevarenaanduidingen (H-zinnen):</strong>`;
                     infoHtml += `<ul style="margin: 4px 0 10px 0; padding-left: 20px; font-size: 0.85rem; color: #b91c1c; list-style-type: square;">`;
@@ -576,7 +642,6 @@
                     infoHtml += `</ul></div>`;
                 }
                 
-                // Voeg P-zinnen toe
                 if (pubChemData.pZinnen.length > 0) {
                     infoHtml += `<div><strong>🛡️ Voorzorgsmaatregelen (P-zinnen):</strong>`;
                     infoHtml += `<ul style="margin: 4px 0 5px 0; padding-left: 20px; font-size: 0.85rem; color: #1d4ed8; list-style-type: square;">`;
@@ -589,12 +654,9 @@
                 }
 
                 infoType.innerHTML = infoHtml;
-                
-                // Link aanpassen naar het specifieke PubChem Dashboard
                 infoWiki.href = `https://pubchem.ncbi.nlm.nih.gov/compound/${pubChemData.cid}`;
                 infoWiki.textContent = `📚 Bekijk '${mooieNaam}' op PubChem →`;
             } else {
-                // Fallback indien PubChem de specifieke formule niet kent
                 infoName.innerHTML = `🔬 Formule: ${actieveFormuleString}`;
                 infoType.innerHTML = `<strong>Formule:</strong> ${actieveFormuleString} ${lokaalKarakterTekst}<br><br><em>Deze verbinding kon niet geautomatiseerd worden gevonden in de PubChem database, maar de molaire massa is wel berekend!</em>`;
                 infoWiki.href = `https://pubchem.ncbi.nlm.nih.gov/#query=${actieveFormuleString}`;
@@ -692,6 +754,11 @@
                     pH = 14 - pOH_sterk;
                     wetMatigheid = "Formule: $pOH = -\\log[OH^-] \\rightarrow pH = 14 - pOH$";
                     break;
+                case "sterke_base_di": // NIEUW: Calciumhydroxide etc.
+                    let pOH_sterk_di = -Math.log10(molariteit * 2);
+                    pH = 14 - pOH_sterk_di;
+                    wetMatigheid = "Formule (tweewaardig): $pOH = -\\log(2 \\cdot C) \\rightarrow pH = 14 - pOH$";
+                    break;
                 case "zwakke_base":
                     let pOH_zwak = 0.5 * (stofInfo.pkb - Math.log10(molariteit));
                     pH = 14 - pOH_zwak;
@@ -709,17 +776,17 @@
             if (pH < 6) { phKleur = "#dc2626"; phAchtergrond = "#fef2f2"; }
             else if (pH > 8) { phKleur = "#2563eb"; phAchtergrond = "#eff6ff"; } 
 
-            phTekst = `<div class="ph-display" style="color: ${phKleur}; background-color: ${phAchtergrond}; border: 1px solid ${phKleur};">
-                        🎨 <strong>Berekende pH-waarde:</strong> ${pH.toFixed(2)}<br>
-                        <span style="font-size: 0.85rem; font-weight: normal; color: #4b5563;">${wetMatigheid}</span>
+            phTekst = `<div class=\"ph-display\" style=\"color: ${phKleur}; background-color: ${phAchtergrond}; border: 1px solid ${phKleur};\">
+                        🎨 <strong>Berekende theoretische pH-waarde:</strong> ${pH.toFixed(2)}<br>
+                        <span style=\"font-size: 0.85rem; font-weight: normal; color: #4b5563;\">${wetMatigheid}</span>
                        </div>`;
         } else {
-            phTekst = `<p style="font-size: 0.85rem; color: #64748b; margin-top: 10px;">ℹ️ <em>pH-berekening niet beschikbaar: '${actieveFormuleString}' is niet gecategoriseerd als standaard zuur/base.</em></p>`;
+            phTekst = `<p style=\"font-size: 0.85rem; color: #64748b; margin-top: 10px;\">ℹ️ <em>pH-berekening niet beschikbaar: '${actieveFormuleString}' is geen standaard/bekend zuur of base in ons schoollabo.</em></p>`;
         }
         
         output.innerHTML = `🧪 <strong>Recept:</strong><br>
                             Weeg exact <strong>${benodigdeMassa.toFixed(3)} gram</strong> van de stof af. <br>
-                            <span style="font-size: 0.9rem; color: #4b5563;">Gebruikte massaformule: ${formuleTekst}</span><br>
+                            <span style=\"font-size: 0.9rem; color: #4b5563;\">Gebruikte massaformule: ${formuleTekst}</span><br>
                             Los dit op in een maatkolf en vul aan met oplosmiddel tot een totaal volume van <strong>${vol} ${unit}</strong>.<br>
                             ${phTekst}`;
         output.style.display = 'block';
