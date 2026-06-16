@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rekenlab: Chemische Berekeningen & pH</title>
+    <link rel="stylesheet" href="style.css">
+    
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']]
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        .calc-card {
+            background: #f8fafc;
+            padding: 2rem;
+            border-radius: 12px;
+            border: 1px solid #cbd5e1;
+            margin: 1.5rem 0;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+        }
+
+        .tool-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 1.5rem;
+        }
+
+        .tool-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 1.5rem;
+            transition: all 0.2s ease;
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .tool-card.active {
+            opacity: 1;
+            pointer-events: auto;
+            border-top: 4px solid var(--secondary-color);
+        }
+
+        .mass-display {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            text-align: center;
+            margin: 1rem 0;
+            padding: 10px;
+            background: #f1f5f9;
+            border-radius: 6px;
+        }
+
+        .substance-info-box {
+            background-color: #f0fdfa;
+            border: 1px solid #99f6e4;
+            border-radius: 8px;
+            padding: 1.25rem;
+            margin-top: 1rem;
+            display: none;
+        }
+
+        .substance-info-box h4 {
+            color: #0f766e;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.2rem;
+        }
+
+        .wiki-link {
+            display: inline-block;
+            margin-top: 12px;
+            color: var(--secondary-color);
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        .wiki-link:hover { text-decoration: underline; }
+
+        .input-inline {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .input-inline input, .input-inline select {
+            height: 40px;
+            padding: 5px 10px;
+            border-radius: 6px;
+            border: 2px solid #94a3b8;
+            outline: none;
+            font-size: 1rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .input-inline input:focus { border-color: var(--secondary-color); }
+
+        .btn-calc {
+            width: 100%;
+            padding: 10px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-calc:hover { background-color: var(--secondary-color); }
+
+        .result-output {
+            margin-top: 1rem;
+            padding: 10px;
+            border-left: 4px solid var(--accent-color);
+            background-color: #f0fdf4;
+            font-weight: bold;
+            color: #166534;
+            border-radius: 0 6px 6px 0;
+            display: none;
+        }
+
+        .ph-display {
+            margin-top: 10px;
+            padding: 8px;
+            border-radius: 6px;
+            font-weight: bold;
+            display: inline-block;
+        }
+
+        .nav-back {
+            position: absolute;
+            left: 20px;
+            top: 20px;
+            color: white;
+            text-decoration: none;
+            background-color: rgba(255, 255, 255, 0.15);
+            padding: 8px 15px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 14px;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .nav-back:hover { background-color: rgba(255, 255, 255, 0.3); }
+
+        .element-breakdown {
+            font-size: 0.9rem;
+            color: #475569;
+            margin-top: 0.5rem;
+            text-align: left;
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .element-breakdown li {
+            padding: 4px 0;
+            border-bottom: 1px dashed #e2e8f0;
+        }
+
+        footer img {
+            vertical-align: middle;
+            display: inline-block;
+            position: relative;
+            top: -1px;
+            max-width: 1em;
+            max-height: 1em;
+            margin-left: .2em;
+        }
+        footer a {
+            color: var(--secondary-color, #38bdf8);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        footer a:hover { color: white; text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+<header style="position: relative;">
+    <a href="index.html" class="nav-back"><span>&#8592;</span> Dashboard</a>
+    <h1>Rekenlab Chemie & pH</h1>
+    <p>Bereken molaire massa's, oplossingen, pH-waarden en bekijk live stofinformatie via PubChem.</p>
+</header>
+
+<main class="container">
+    <div class="calc-card">
+        <h2>1. Voer de chemische formule in</h2>
+        <p style="color: #64748b; margin-bottom: 1rem;">Typ een geldige formule (bv. <code>HCl</code>, <code>NaOH</code>, <code>CH3COOH</code>, <code>NH3</code> of <code>H2O</code>). Let op hoofdletters!</p>
+        
+        <div class="input-inline">
+            <input type="text" id="formula-input" placeholder="bv. HCl" style="text-transform: none;">
+            <button class="btn-calc" style="width: auto; white-space: nowrap;" onclick="berekenMolaireMassa()">Bereken Massa</button>
+        </div>
+
+        <div id="massa-resultaat-box" style="display: none;">
+            <div class="mass-display" id="molar-mass-value">0.00 g/mol</div>
+            <ul class="element-breakdown" id="formula-breakdown"></ul>
+            
+            <div class="substance-info-box" id="substance-info-card">
+                <h4 id="substance-name">🔍 Stofnaam</h4>
+                <div id="substance-type" style="font-size: 0.95rem; color: #334155; line-height: 1.5;"></div>
+                <a id="substance-wiki" href="#" target="_blank" class="wiki-link">📚 Open PubChem Dashboard &rarr;</a>
+            </div>
+        </div>
+    </div>
+
+    <h2 style="color: var(--primary-color); margin-top: 2rem;">2. Kies een vervolgberekening</h2>
+    <p id="unlock-warning" style="color: #ef4444; font-weight: bold;">⚠️ Voer eerst hierboven een geldige formule in om deze rekenmodules te ontgrendelen.</p>
+
+    <div class="tool-grid">
+        <div class="tool-card" id="card-mol-naar-massa">
+            <h3>Mol &rarr; Massa (gram)</h3>
+            <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 1rem;">Bereken hoeveel gram een aantal mol weegt ($m = n \cdot M$).</p>
+            <div class="input-inline">
+                <label style="min-width: 60px;">Aantal $n$:</label>
+                <input type="text" inputmode="decimal" id="input-mol" placeholder="bv. 0,5">
+                <span>mol</span>
+            </div>
+            <button class="btn-calc" onclick="berekenMolNaarMassa()">Reken uit</button>
+            <div class="result-output" id="res-mol-naar-massa"></div>
+        </div>
+
+        <div class="tool-card" id="card-massa-naar-mol">
+            <h3>Massa (gram) &rarr; Mol</h3>
+            <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 1rem;">Bereken hoeveel mol een aantal gram bevat ($n = \frac{m}{M}$).</p>
+            <div class="input-inline">
+                <label style="min-width: 60px;">Massa $m$:</label>
+                <input type="text" inputmode="decimal" id="input-massa" placeholder="bv. 25,5">
+                <span>gram</span>
+            </div>
+            <button class="btn-calc" onclick="berekenMassaNaarMol()">Reken uit</button>
+            <div class="result-output" id="res-massa-naar-mol"></div>
+        </div>
+
+        <div class="tool-card" id="card-concentratie">
+            <h3>Concentratie & Oplossing</h3>
+            <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 1rem;">Bereken het recept én de theoretische pH-waarde van de resulterende waterige oplossing.</p>
+            <div class="input-inline">
+                <label style="min-width: 80px;">Conc. ($C$):</label>
+                <input type="text" inputmode="decimal" id="input-conc" placeholder="bv. 0,1">
+                <select id="input-conc-unit" style="max-width: 110px;">
+                    <option value="mol/L">mol/L (M)</option>
+                    <option value="g/L">g/L</option>
+                    <option value="g/mL">g/mL</option>
+                </select>
+            </div>
+            <div class="input-inline">
+                <label style="min-width: 80px;">Volume ($V$):</label>
+                <input type="text" inputmode="decimal" id="input-vol" placeholder="bv. 250">
+                <select id="input-vol-unit" style="max-width: 90px;">
+                    <option value="mL">mL</option>
+                    <option value="L">L</option>
+                </select>
+            </div>
+            <button class="btn-calc" onclick="berekenOplossing()">Bereken recept & pH</button>
+            <div class="result-output" id="res-concentratie" style="color: #1e3a8a; background-color: #eff6ff; border-left-color: var(--secondary-color);"></div>
+        </div>
+    </div>
+</main>
+
+<footer>
+    <p>
+        <a href="https://pieter-smets.github.io/Website-Chemie/index.html">Chemie Lab</a> &copy; 2026 by 
+        <a href="https://github.com/Pieter-Smets">Pieter SMETS</a> is licensed under 
+        <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a>
+        <img src="https://mirrors.creativecommons.org/presskit/icons/cc.svg" alt="">
+        <img src="https://mirrors.creativecommons.org/presskit/icons/by.svg" alt="">
+        <img src="https://mirrors.creativecommons.org/presskit/icons/nc.svg" alt="">
+        <img src="https://mirrors.creativecommons.org/presskit/icons/sa.svg" alt="">
+    </p>
+</footer>
+
+<script>
+   const atoommassaDatabase = {
+        "H": 1.008, "He": 4.003, "Li": 6.941, "Be": 9.012, "B": 10.811, "C": 12.011,
+        "N": 14.007, "O": 15.999, "F": 18.998, "Ne": 20.180, "Na": 22.990, "Mg": 24.305,
+        "Al": 26.982, "Si": 28.085, "P": 30.974, "S": 32.065, "Cl": 35.45, "Ar": 39.948,
+        "K": 39.098, "Ca": 40.078, "Sc": 44.956, "Ti": 47.867, "V": 50.942, "Cr": 51.996,
+        "Mn": 54.938, "Fe": 55.845, "Co": 58.933, "Ni": 58.693, "Cu": 63.546, "Zn": 65.38,
+        "Ga": 69.723, "Ge": 72.630, "As": 74.922, "Se": 78.971, "Br": 79.904, "Kr": 83.798,
+        "Rb": 85.468, "Sr": 87.620, "Y": 88.906, "Zr": 91.224, "Nb": 92.906, "Mo": 95.95,
+        "Tc": 98.000, "Ru": 101.07, "Rh": 102.906, "Pd": 106.42, "Ag": 107.868, "Cd": 112.414,
+        "In": 114.818, "Sn": 118.710, "Sb": 121.760, "Te": 127.60, "I": 126.904, "Xe": 131.293,
+        "Cs": 132.905, "Ba": 137.327, "La": 138.905, "Ce": 140.116, "Pr": 140.907, "Nd": 144.242,
+        "Pm": 145.000, "Sm": 150.36, "Eu": 151.964, "Gd": 157.25, "Tb": 158.925, "Dy": 162.500,
+        "Ho": 164.930, "Er": 167.259, "Tm": 168.934, "Yb": 173.045, "Lu": 174.967, "Hf": 178.49,
+        "Ta": 180.948, "W": 183.84, "Re": 186.207, "Os": 190.23, "Ir": 192.217, "Pt": 195.084,
+        "Au": 196.967, "Hg": 200.592, "Tl": 204.38, "Pb": 207.2, "Bi": 208.980, "Po": 209.000,
+        "At": 210.000, "Rn": 222.000, "Fr": 223.000, "Ra": 226.000, "Ac": 227.000, "Th": 232.038, 
+        "Pa": 231.036, "U": 238.029, "Np": 237.000, "Pu": 244.000, "Am": 243.000, "Cm": 247.000, 
+        "Bk": 247.000, "Cf": 251.000, "Es": 252.000, "Fm": 257.000, "Md": 258.000, "No": 259.000, 
+        "Lr": 262.000, "Rf": 267.000, "Db": 270.000, "Sg": 271.000, "Bh": 270.000, "Hs": 277.000, 
+        "Mt": 276.000, "Ds": 281.000, "Rg": 280.000, "Cn": 285.000, "Nh": 284.000, "Fl": 289.000, 
+        "Mc": 288.000, "Lv": 293.000, "Ts": 294.000, "Og": 294.000
+    };
+
+    const bekendeStoffenPortaal = {
+        "HCl": { naam: "Waterstofchloride (Zoutzuur)", karakter: "sterk_zuur" },
+        "HNO3": { naam: "Salpeterzuur", karakter: "sterk_zuur" },
+        "H2SO4": { naam: "Zwavelzuur", karakter: "sterk_zuur_di" },
+        "CH3COOH": { naam: "Azijnzuur (Ethaanzuur)", karakter: "zwak_zuur", pka: 4.75 },
+        "H2CO3": { naam: "Koolzuur", karakter: "zwak_zuur", pka: 6.37 },
+        "NaOH": { naam: "Natriumhydroxide (Bijtende soda)", karakter: "sterke_base" },
+        "KOH": { naam: "Kaliumhydroxide", karakter: "sterke_base" },
+        "NH3": { naam: "Ammoniak", karakter: "zwakke_base", pkb: 4.75 },
+        "H2O": { naam: "Water", karakter: "neutraal" },
+        "NaCl": { naam: "Natriumchloride (Keukenzout)", karakter: "neutraal_zout" }
+    };
+
+    let berekendeMolaireMassa = 0;
+    let actieveFormuleString = "";
+
+    function haalKommaGetalOp(elementId) {
+        let veldWaarde = document.getElementById(elementId).value.trim();
+        if (!veldWaarde) return NaN;
+        veldWaarde = veldWaarde.replace(',', '.');
+        return parseFloat(veldWaarde);
+    }
+
+    // NIEUW: Geoptimaliseerde live koppeling met de PubChem API
+    // NIEUW: Slimmere live koppeling met de PubChem API (zoekt op synoniem én formule)
+    async function haalPubChemDataOp(formule) {
+        let cid = null;
+        
+        try {
+            // STAP 1A: Zoek eerst of PubChem de formule herkent als "naam/synoniem" 
+            // (Dit werkt perfect voor genoteerde formules zoals CH3COOH of NaOH)
+            let cidUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/${encodeURIComponent(formule)}/cids/JSON`;
+            let cidResponse = await fetch(cidUrl);
+            
+            // STAP 1B: Als dat mislukt, zoek dan strikt als "formule" (Hill-systeem)
+            if (!cidResponse.ok) {
+                cidUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/formula/${encodeURIComponent(formule)}/cids/JSON`;
+                cidResponse = await fetch(cidUrl);
+            }
+
+            if (!cidResponse.ok) return null; // Stof echt niet gevonden
+            
+            const cidData = await cidResponse.json();
+            if (!cidData.IdentifierList || !cidData.IdentifierList.CID || cidData.IdentifierList.CID.length === 0) return null;
+            
+            cid = cidData.IdentifierList.CID[0]; // Pak het hoofd-ID (CID)
+
+            // Stap 2: Haal de officiële stofnaam op
+            const propUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/${cid}/property/Title/JSON`;
+            const propResponse = await fetch(propUrl);
+            let EngelseNaam = "";
+            if (propResponse.ok) {
+                const propData = await propResponse.json();
+                if (propData.PropertyTable && propData.PropertyTable.Properties && propData.PropertyTable.Properties.length > 0) {
+                    EngelseNaam = propData.PropertyTable.Properties[0].Title;
+                }
+            }
+
+            // Stap 3: Haal GHS Veiligheidsinformatie en pH op uit de PubChem View API
+            const viewUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/data/compound/${cid}/JSON`;
+            const viewResponse = await fetch(viewUrl);
+            
+            let hZinnen = [];
+            let pZinnen = [];
+            let pictograms = [];
+            let phInfo = "";
+
+            if (viewResponse.ok) {
+                const viewData = await viewResponse.json();
+                
+                // Recursieve helperfunctie om secties te scannen
+                function vindSectie(node, heading) {
+                    if (!node) return null;
+                    if (node.TOCHeading === heading) return node;
+                    if (node.Section) {
+                        for (let sub of node.Section) {
+                            let res = vindSectie(sub, heading);
+                            if (res) return res;
+                        }
+                    }
+                    return null;
+                }
+
+                const root = viewData.Record;
+                
+                const ghsSectie = vindSectie(root, "GHS Classification");
+                if (ghsSectie) {
+                    function scanGHS(node) {
+                        if (!node) return;
+                        if (node.Information) {
+                            for (let info of node.Information) {
+                                if (info.Name === "GHS Hazard Statements" && info.Value && info.Value.StringWithMarkup) {
+                                    info.Value.StringWithMarkup.forEach(s => {
+                                        if (s.String && !hZinnen.includes(s.String)) hZinnen.push(s.String);
+                                    });
+                                }
+                                if (info.Name === "Precautionary Statement Codes" && info.Value && info.Value.StringWithMarkup) {
+                                    info.Value.StringWithMarkup.forEach(s => {
+                                        if (s.String && !pZinnen.includes(s.String)) pZinnen.push(s.String);
+                                    });
+                                }
+                                if (info.Name === "Pictogram(s)" && info.Value && info.Value.StringWithMarkup) {
+                                    info.Value.StringWithMarkup.forEach(s => {
+                                        if (s.Markup) {
+                                            s.Markup.forEach(m => {
+                                                if (m.URL && !pictograms.includes(m.URL)) pictograms.push(m.URL);
+                                            });
+                                        }
+                                    });
+                                }
+                            }
+                        }
+                        if (node.Section) node.Section.forEach(scanGHS);
+                    }
+                    scanGHS(ghsSectie);
+                }
+
+                const phSectie = vindSectie(root, "pH");
+                if (phSectie && phSectie.Information) {
+                    let phStrings = [];
+                    phSectie.Information.forEach(info => {
+                        if (info.Value && info.Value.StringWithMarkup) {
+                            info.Value.StringWithMarkup.forEach(s => {
+                                if (s.String) phStrings.push(s.String);
+                            });
+                        }
+                    });
+                    if (phStrings.length > 0) phInfo = phStrings.join(" | ");
+                }
+            }
+
+            return {
+                cid: cid,
+                naam: EngelseNaam,
+                hZinnen: hZinnen.slice(0, 4),
+                pZinnen: pZinnen.slice(0, 4),
+                pictograms: pictograms,
+                phInfo: phInfo
+            };
+
+        } catch (fout) {
+            console.error("Fout bij ophalen PubChem data:", fout);
+            return null;
+        }
+    }
+
+    function parseFormule(formule) {
+        let cleanFormule = formule.replace(/\s+/g, '');
+        cleanFormule = cleanFormule.replace(/([A-Z][a-z]?)(0)/g, '$1O');
+        
+        const regex = /([A-Z][a-z]?)([0-9]*)/g;
+        let match;
+        let totaleMassa = 0;
+        let elementenLijst = [];
+        let isGeldig = true;
+        let teller = 0;
+
+        if (!cleanFormule) return null;
+
+        while ((match = regex.exec(cleanFormule)) !== null) {
+            teller += match[0].length;
+            const symbool = match[1];
+            const aantal = match[2] ? parseInt(match[2]) : 1;
+
+            if (atoommassaDatabase[symbool]) {
+                const elementMassa = atoommassaDatabase[symbool] * aantal;
+                totaleMassa += elementMassa;
+                elementenLijst.push({
+                    symbool: symbool,
+                    aantal: aantal,
+                    massaPerStuk: atoommassaDatabase[symbool],
+                    totaleElementMassa: elementMassa
+                });
+            } else {
+                isGeldig = false;
+            }
+        }
+        if (teller !== cleanFormule.length) isGeldig = false;
+
+        return {
+            isGeldig: isGeldig && elementenLijst.length > 0,
+            molarMass: totaleMassa,
+            details: elementenLijst,
+            cleanFormule: cleanFormule
+        };
+    }
+
+    async function berekenMolaireMassa() {
+        const inputStof = document.getElementById('formula-input').value.trim();
+        const resultaat = parseFormule(inputStof);
+        
+        const resultBox = document.getElementById('massa-resultaat-box');
+        const breakdownUl = document.getElementById('formula-breakdown');
+        const massValueDiv = document.getElementById('molar-mass-value');
+        const warning = document.getElementById('unlock-warning');
+        
+        const infoCard = document.getElementById('substance-info-card');
+        const infoName = document.getElementById('substance-name');
+        const infoType = document.getElementById('substance-type');
+        const infoWiki = document.getElementById('substance-wiki');
+
+        if (resultaat && resultaat.isGeldig) {
+            berekendeMolaireMassa = resultaat.molarMass;
+            actieveFormuleString = resultaat.cleanFormule;
+            massValueDiv.textContent = `M = ${berekendeMolaireMassa.toFixed(3)} g/mol`;
+            
+            breakdownUl.innerHTML = '';
+            resultaat.details.forEach(item => {
+                const li = document.createElement('li');
+                li.innerHTML = `🧬 <strong>${item.symbool}</strong>: ${item.aantal} &times; ${item.massaPerStuk.toFixed(3)} u = ${item.totaleElementMassa.toFixed(3)} g/mol`;
+                breakdownUl.appendChild(li);
+            });
+
+            // Toon vast het laadscherm voor PubChem data
+            infoName.innerHTML = `⏳ Live gegevens ophalen uit PubChem...`;
+            infoType.innerHTML = "Even geduld, we zoeken gevarensymbolen, H/P-zinnen en de officiële naam op.";
+            infoWiki.style.display = "none"; 
+            
+            resultBox.style.display = 'block';
+            infoCard.style.display = 'block';
+            warning.style.display = 'none';
+
+            // Haal de live data op via onze nieuwe PubChem koppeling
+            const pubChemData = await haalPubChemDataOp(actieveFormuleString);
+            
+            infoWiki.style.display = "inline-block"; 
+
+            // Kijk of de stof lokaal gecategoriseerd is voor pH doeleinden
+            let lokaalKarakterTekst = "";
+            if (bekendeStoffenPortaal[actieveFormuleString]) {
+                const stof = bekendeStoffenPortaal[actieveFormuleString];
+                if(stof.karakter.includes("zuur")) lokaalKarakterTekst = "<br>🔴 <strong>Zure verbinding</strong> (rekenmodule onderaan actief)";
+                else if(stof.karakter.includes("base")) lokaalKarakterTekst = "<br>🔵 <strong>Basische verbinding</strong> (rekenmodule onderaan actief)";
+                else lokaalKarakterTekst = "<br>🟢 <strong>Neutrale verbinding</strong> (rekenmodule onderaan actief)";
+            } else {
+                lokaalKarakterTekst = "<br>⚪ <em>Karakter onbekend voor de pH-rekenmodule (we gaan uit van een pH van 7).</em>";
+            }
+
+            if (pubChemData) {
+                const mooieNaam = pubChemData.naam ? pubChemData.naam.charAt(0).toUpperCase() + pubChemData.naam.slice(1) : actieveFormuleString;
+                infoName.innerHTML = `🔬 ${mooieNaam}`;
+                
+                // Bouw uitgebreide PubChem gevarenkaart HTML op
+                let infoHtml = `<strong>Formule:</strong> ${actieveFormuleString} | <strong>PubChem CID:</strong> ${pubChemData.cid}${lokaalKarakterTekst}<br>`;
+                
+                // Toon experimentele pH als PubChem die heeft
+                if (pubChemData.phInfo) {
+                    infoHtml += `<span style="display:inline-block; margin-top:5px;">ℹ️ <strong>PubChem pH info:</strong> <em>${pubChemData.phInfo}</em></span><br>`;
+                }
+                
+                // Voeg GHS Gevarensymbolen toe (indien aanwezig)
+                if (pubChemData.pictograms.length > 0) {
+                    infoHtml += `<div style="margin: 12px 0 8px 0; display: flex; gap: 8px; flex-wrap: wrap;">`;
+                    pubChemData.pictograms.forEach(url => {
+                        infoHtml += `<img src="${url}" alt="GHS Gevarensymbool" title="GHS Waarschuwingssymbool" style="width: 45px; height: 45px; background: white; border: 1px solid #cbd5e1; padding: 2px; border-radius: 4px;">`;
+                    });
+                    infoHtml += `</div>`;
+                }
+                
+                // Voeg H-zinnen toe
+                if (pubChemData.hZinnen.length > 0) {
+                    infoHtml += `<div style="margin-top: 8px;"><strong>⚠️ Gevarenaanduidingen (H-zinnen):</strong>`;
+                    infoHtml += `<ul style="margin: 4px 0 10px 0; padding-left: 20px; font-size: 0.85rem; color: #b91c1c; list-style-type: square;">`;
+                    pubChemData.hZinnen.forEach(h => { infoHtml += `<li>${h}</li>`; });
+                    infoHtml += `</ul></div>`;
+                }
+                
+                // Voeg P-zinnen toe
+                if (pubChemData.pZinnen.length > 0) {
+                    infoHtml += `<div><strong>🛡️ Voorzorgsmaatregelen (P-zinnen):</strong>`;
+                    infoHtml += `<ul style="margin: 4px 0 5px 0; padding-left: 20px; font-size: 0.85rem; color: #1d4ed8; list-style-type: square;">`;
+                    pubChemData.pZinnen.forEach(p => { infoHtml += `<li>${p}</li>`; });
+                    infoHtml += `</ul></div>`;
+                }
+                
+                if (pubChemData.hZinnen.length === 0 && pubChemData.pZinnen.length === 0) {
+                    infoHtml += `<br><em>Geen specifieke GHS-veiligheidsrestricties of H/P-zinnen geregistreerd in PubChem voor deze selectie.</em>`;
+                }
+
+                infoType.innerHTML = infoHtml;
+                
+                // Link aanpassen naar het specifieke PubChem Dashboard
+                infoWiki.href = `https://pubchem.ncbi.nlm.nih.gov/compound/${pubChemData.cid}`;
+                infoWiki.textContent = `📚 Bekijk '${mooieNaam}' op PubChem →`;
+            } else {
+                // Fallback indien PubChem de specifieke formule niet kent
+                infoName.innerHTML = `🔬 Formule: ${actieveFormuleString}`;
+                infoType.innerHTML = `<strong>Formule:</strong> ${actieveFormuleString} ${lokaalKarakterTekst}<br><br><em>Deze verbinding kon niet geautomatiseerd worden gevonden in de PubChem database, maar de molaire massa is wel berekend!</em>`;
+                infoWiki.href = `https://pubchem.ncbi.nlm.nih.gov/#query=${actieveFormuleString}`;
+                infoWiki.textContent = `🔍 Zoek '${actieveFormuleString}' handmatig op PubChem →`;
+            }
+
+            document.querySelectorAll('.tool-card').forEach(card => card.classList.add('active'));
+            if (window.MathJax && window.MathJax.typeset) MathJax.typeset();
+        } else {
+            berekendeMolaireMassa = 0;
+            actieveFormuleString = "";
+            alert("❌ Ongeldige chemische formule. Denk aan de juiste hoofdletters (bv. 'HCl', 'NaOH')!");
+            resultBox.style.display = 'none';
+            warning.style.display = 'block';
+            document.querySelectorAll('.tool-card').forEach(card => card.classList.remove('active'));
+        }
+    }
+
+    function berekenMolNaarMassa() {
+        const mol = haalKommaGetalOp('input-mol');
+        const output = document.getElementById('res-mol-naar-massa');
+        if (isNaN(mol) || mol <= 0) { alert("Vul een geldig aantal mol in (bijv. 0,5)."); return; }
+        const massa = mol * berekendeMolaireMassa;
+        output.innerHTML = `➔ Massa ($m$) = ${massa.toFixed(3)} gram`;
+        output.style.display = 'block';
+        if (window.MathJax && window.MathJax.typeset) MathJax.typeset([output]);
+    }
+
+    function berekenMassaNaarMol() {
+        const massa = haalKommaGetalOp('input-massa');
+        const output = document.getElementById('res-massa-naar-mol');
+        if (isNaN(massa) || massa <= 0) { alert("Vul een geldige massa in gram in (bijv. 25,5)."); return; }
+        const mol = massa / berekendeMolaireMassa;
+        output.innerHTML = `➔ Hoeveelheid ($n$) = ${mol.toFixed(4)} mol`;
+        output.style.display = 'block';
+        if (window.MathJax && window.MathJax.typeset) MathJax.typeset([output]);
+    }
+
+    function berekenOplossing() {
+        const conc = haalKommaGetalOp('input-conc');
+        const concUnit = document.getElementById('input-conc-unit').value;
+        const vol = haalKommaGetalOp('input-vol');
+        const unit = document.getElementById('input-vol-unit').value;
+        const output = document.getElementById('res-concentratie');
+
+        if (isNaN(conc) || conc <= 0 || isNaN(vol) || vol <= 0) {
+            alert("Vul geldige getallen in voor de concentratie en het volume (bijv. 0,1).");
+            return;
+        }
+
+        let volInLiters = (unit === "mL") ? vol / 1000 : vol;
+        let volInMilliLiters = (unit === "L") ? vol * 1000 : vol;
+        
+        let benodigdeMassa = 0;
+        let formuleTekst = "";
+
+        if (concUnit === "mol/L") {
+            benodigdeMassa = conc * volInLiters * berekendeMolaireMassa;
+            formuleTekst = "$m = C \\cdot V \\cdot M$";
+        } else if (concUnit === "g/L") {
+            benodigdeMassa = conc * volInLiters;
+            formuleTekst = "$m = \\rho \\cdot V$";
+        } else if (concUnit === "g/mL") {
+            benodigdeMassa = conc * volInMilliLiters;
+            formuleTekst = "$m = \\rho \\cdot V$";
+        }
+
+        let molariteit = 0;
+        if (concUnit === "mol/L") molariteit = conc;
+        else if (concUnit === "g/L") molariteit = conc / berekendeMolaireMassa;
+        else if (concUnit === "g/mL") molariteit = (conc * 1000) / berekendeMolaireMassa;
+
+        let phTekst = "";
+        const stofInfo = bekendeStoffenPortaal[actieveFormuleString];
+
+        if (stofInfo) {
+            let pH = 7.00;
+            let wetMatigheid = "";
+
+            switch(stofInfo.karakter) {
+                case "sterk_zuur":
+                    pH = -Math.log10(molariteit);
+                    wetMatigheid = "Formule: $pH = -\\log[H_3O^+]$";
+                    break;
+                case "sterk_zuur_di":
+                    pH = -Math.log10(molariteit * 2);
+                    wetMatigheid = "Formule (tweewaardig): $pH = -\\log(2 \\cdot C)$";
+                    break;
+                case "zwak_zuur":
+                    pH = 0.5 * (stofInfo.pka - Math.log10(molariteit));
+                    wetMatigheid = `Formule: $pH = \\frac{1}{2}(pK_a - \\log C)$ (met $pK_a = ${stofInfo.pka}$)`;
+                    break;
+                case "sterke_base":
+                    let pOH_sterk = -Math.log10(molariteit);
+                    pH = 14 - pOH_sterk;
+                    wetMatigheid = "Formule: $pOH = -\\log[OH^-] \\rightarrow pH = 14 - pOH$";
+                    break;
+                case "zwakke_base":
+                    let pOH_zwak = 0.5 * (stofInfo.pkb - Math.log10(molariteit));
+                    pH = 14 - pOH_zwak;
+                    wetMatigheid = `Formule: $pOH = \\frac{1}{2}(pK_b - \\log C) \\rightarrow pH = 14 - pOH$ (met $pK_b = ${stofInfo.pkb}$)`;
+                    break;
+                case "neutraal":
+                case "neutraal_zout":
+                    pH = 7.00;
+                    wetMatigheid = "Neutrale oplossing in water.";
+                    break;
+            }
+
+            let phKleur = "#16a34a"; 
+            let phAchtergrond = "#f0fdf4";
+            if (pH < 6) { phKleur = "#dc2626"; phAchtergrond = "#fef2f2"; }
+            else if (pH > 8) { phKleur = "#2563eb"; phAchtergrond = "#eff6ff"; } 
+
+            phTekst = `<div class="ph-display" style="color: ${phKleur}; background-color: ${phAchtergrond}; border: 1px solid ${phKleur};">
+                        🎨 <strong>Berekende pH-waarde:</strong> ${pH.toFixed(2)}<br>
+                        <span style="font-size: 0.85rem; font-weight: normal; color: #4b5563;">${wetMatigheid}</span>
+                       </div>`;
+        } else {
+            phTekst = `<p style="font-size: 0.85rem; color: #64748b; margin-top: 10px;">ℹ️ <em>pH-berekening niet beschikbaar: '${actieveFormuleString}' is niet gecategoriseerd als standaard zuur/base.</em></p>`;
+        }
+        
+        output.innerHTML = `🧪 <strong>Recept:</strong><br>
+                            Weeg exact <strong>${benodigdeMassa.toFixed(3)} gram</strong> van de stof af. <br>
+                            <span style="font-size: 0.9rem; color: #4b5563;">Gebruikte massaformule: ${formuleTekst}</span><br>
+                            Los dit op in een maatkolf en vul aan met oplosmiddel tot een totaal volume van <strong>${vol} ${unit}</strong>.<br>
+                            ${phTekst}`;
+        output.style.display = 'block';
+
+        if (window.MathJax && window.MathJax.typeset) MathJax.typeset([output]);
+    }
+</script>
+
+</body>
+</html>
