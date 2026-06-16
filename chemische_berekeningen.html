@@ -63,7 +63,7 @@
             background-color: #f0fdfa;
             border: 1px solid #99f6e4;
             border-radius: 8px;
-            padding: 1rem;
+            padding: 1.25rem;
             margin-top: 1rem;
             display: none;
         }
@@ -74,11 +74,12 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            font-size: 1.2rem;
         }
 
         .wiki-link {
             display: inline-block;
-            margin-top: 8px;
+            margin-top: 12px;
             color: var(--secondary-color);
             text-decoration: none;
             font-weight: bold;
@@ -193,7 +194,7 @@
 <header style="position: relative;">
     <a href="index.html" class="nav-back"><span>&#8592;</span> Dashboard</a>
     <h1>Rekenlab Chemie & pH</h1>
-    <p>Bereken molaire massa's, oplossingen, pH-waarden en bekijk stofinformatie.</p>
+    <p>Bereken molaire massa's, oplossingen, pH-waarden en bekijk live stofinformatie via PubChem.</p>
 </header>
 
 <main class="container">
@@ -212,8 +213,8 @@
             
             <div class="substance-info-box" id="substance-info-card">
                 <h4 id="substance-name">🔍 Stofnaam</h4>
-                <p id="substance-type" style="font-size: 0.9rem; color: #4b5563;"></p>
-                <a id="substance-wiki" href="#" target="_blank" class="wiki-link">📚 Open Wikipedia pagina &rarr;</a>
+                <div id="substance-type" style="font-size: 0.95rem; color: #334155; line-height: 1.5;"></div>
+                <a id="substance-wiki" href="#" target="_blank" class="wiki-link">📚 Open PubChem Dashboard &rarr;</a>
             </div>
         </div>
     </div>
@@ -309,28 +310,149 @@
     };
 
     const bekendeStoffenPortaal = {
-        "HCl": { naam: "Waterstofchloride (Zoutzuur)", karakter: "sterk_zuur", wiki: "Waterstofchloride" },
-        "HNO3": { naam: "Salpeterzuur", karakter: "sterk_zuur", wiki: "Salpeterzuur" },
-        "H2SO4": { naam: "Zwavelzuur", karakter: "sterk_zuur_di", wiki: "Zwavelzuur" },
-        "CH3COOH": { naam: "Azijnzuur (Ethaanzuur)", karakter: "zwak_zuur", pka: 4.75, wiki: "Azijnzuur" },
-        "H2CO3": { naam: "Koolzuur", karakter: "zwak_zuur", pka: 6.37, wiki: "Koolzuur" },
-        "NaOH": { naam: "Natriumhydroxide (Bijtende soda)", karakter: "sterke_base", wiki: "Natriumhydroxide" },
-        "KOH": { naam: "Kaliumhydroxide", karakter: "sterke_base", wiki: "Kaliumhydroxide" },
-        "NH3": { naam: "Ammoniak", karakter: "zwakke_base", pkb: 4.75, wiki: "Ammoniak" },
-        "H2O": { naam: "Water", karakter: "neutraal", wiki: "Water" },
-        "NaCl": { naam: "Natriumchloride (Keukenzout)", karakter: "neutraal_zout", wiki: "Natriumchloride" }
+        "HCl": { naam: "Waterstofchloride (Zoutzuur)", karakter: "sterk_zuur" },
+        "HNO3": { naam: "Salpeterzuur", karakter: "sterk_zuur" },
+        "H2SO4": { naam: "Zwavelzuur", karakter: "sterk_zuur_di" },
+        "CH3COOH": { naam: "Azijnzuur (Ethaanzuur)", karakter: "zwak_zuur", pka: 4.75 },
+        "H2CO3": { naam: "Koolzuur", karakter: "zwak_zuur", pka: 6.37 },
+        "NaOH": { naam: "Natriumhydroxide (Bijtende soda)", karakter: "sterke_base" },
+        "KOH": { naam: "Kaliumhydroxide", karakter: "sterke_base" },
+        "NH3": { naam: "Ammoniak", karakter: "zwakke_base", pkb: 4.75 },
+        "H2O": { naam: "Water", karakter: "neutraal" },
+        "NaCl": { naam: "Natriumchloride (Keukenzout)", karakter: "neutraal_zout" }
     };
 
     let berekendeMolaireMassa = 0;
     let actieveFormuleString = "";
 
-    // OPGELOST: Speciaal hulpscriptje om komma's te verwerken als punten
     function haalKommaGetalOp(elementId) {
         let veldWaarde = document.getElementById(elementId).value.trim();
         if (!veldWaarde) return NaN;
-        // Vervang komma door punt zodat de computer het begrijpt
         veldWaarde = veldWaarde.replace(',', '.');
         return parseFloat(veldWaarde);
+    }
+
+    // NIEUW: Geoptimaliseerde live koppeling met de PubChem API
+    // NIEUW: Slimmere live koppeling met de PubChem API (zoekt op synoniem én formule)
+    async function haalPubChemDataOp(formule) {
+        let cid = null;
+        
+        try {
+            // STAP 1A: Zoek eerst of PubChem de formule herkent als "naam/synoniem" 
+            // (Dit werkt perfect voor genoteerde formules zoals CH3COOH of NaOH)
+            let cidUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/${encodeURIComponent(formule)}/cids/JSON`;
+            let cidResponse = await fetch(cidUrl);
+            
+            // STAP 1B: Als dat mislukt, zoek dan strikt als "formule" (Hill-systeem)
+            if (!cidResponse.ok) {
+                cidUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/formula/${encodeURIComponent(formule)}/cids/JSON`;
+                cidResponse = await fetch(cidUrl);
+            }
+
+            if (!cidResponse.ok) return null; // Stof echt niet gevonden
+            
+            const cidData = await cidResponse.json();
+            if (!cidData.IdentifierList || !cidData.IdentifierList.CID || cidData.IdentifierList.CID.length === 0) return null;
+            
+            cid = cidData.IdentifierList.CID[0]; // Pak het hoofd-ID (CID)
+
+            // Stap 2: Haal de officiële stofnaam op
+            const propUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/${cid}/property/Title/JSON`;
+            const propResponse = await fetch(propUrl);
+            let EngelseNaam = "";
+            if (propResponse.ok) {
+                const propData = await propResponse.json();
+                if (propData.PropertyTable && propData.PropertyTable.Properties && propData.PropertyTable.Properties.length > 0) {
+                    EngelseNaam = propData.PropertyTable.Properties[0].Title;
+                }
+            }
+
+            // Stap 3: Haal GHS Veiligheidsinformatie en pH op uit de PubChem View API
+            const viewUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/data/compound/${cid}/JSON`;
+            const viewResponse = await fetch(viewUrl);
+            
+            let hZinnen = [];
+            let pZinnen = [];
+            let pictograms = [];
+            let phInfo = "";
+
+            if (viewResponse.ok) {
+                const viewData = await viewResponse.json();
+                
+                // Recursieve helperfunctie om secties te scannen
+                function vindSectie(node, heading) {
+                    if (!node) return null;
+                    if (node.TOCHeading === heading) return node;
+                    if (node.Section) {
+                        for (let sub of node.Section) {
+                            let res = vindSectie(sub, heading);
+                            if (res) return res;
+                        }
+                    }
+                    return null;
+                }
+
+                const root = viewData.Record;
+                
+                const ghsSectie = vindSectie(root, "GHS Classification");
+                if (ghsSectie) {
+                    function scanGHS(node) {
+                        if (!node) return;
+                        if (node.Information) {
+                            for (let info of node.Information) {
+                                if (info.Name === "GHS Hazard Statements" && info.Value && info.Value.StringWithMarkup) {
+                                    info.Value.StringWithMarkup.forEach(s => {
+                                        if (s.String && !hZinnen.includes(s.String)) hZinnen.push(s.String);
+                                    });
+                                }
+                                if (info.Name === "Precautionary Statement Codes" && info.Value && info.Value.StringWithMarkup) {
+                                    info.Value.StringWithMarkup.forEach(s => {
+                                        if (s.String && !pZinnen.includes(s.String)) pZinnen.push(s.String);
+                                    });
+                                }
+                                if (info.Name === "Pictogram(s)" && info.Value && info.Value.StringWithMarkup) {
+                                    info.Value.StringWithMarkup.forEach(s => {
+                                        if (s.Markup) {
+                                            s.Markup.forEach(m => {
+                                                if (m.URL && !pictograms.includes(m.URL)) pictograms.push(m.URL);
+                                            });
+                                        }
+                                    });
+                                }
+                            }
+                        }
+                        if (node.Section) node.Section.forEach(scanGHS);
+                    }
+                    scanGHS(ghsSectie);
+                }
+
+                const phSectie = vindSectie(root, "pH");
+                if (phSectie && phSectie.Information) {
+                    let phStrings = [];
+                    phSectie.Information.forEach(info => {
+                        if (info.Value && info.Value.StringWithMarkup) {
+                            info.Value.StringWithMarkup.forEach(s => {
+                                if (s.String) phStrings.push(s.String);
+                            });
+                        }
+                    });
+                    if (phStrings.length > 0) phInfo = phStrings.join(" | ");
+                }
+            }
+
+            return {
+                cid: cid,
+                naam: EngelseNaam,
+                hZinnen: hZinnen.slice(0, 4),
+                pZinnen: pZinnen.slice(0, 4),
+                pictograms: pictograms,
+                phInfo: phInfo
+            };
+
+        } catch (fout) {
+            console.error("Fout bij ophalen PubChem data:", fout);
+            return null;
+        }
     }
 
     function parseFormule(formule) {
@@ -374,7 +496,6 @@
         };
     }
 
-    // LET OP: Het woordje 'async' is hier vooraan toegevoegd!
     async function berekenMolaireMassa() {
         const inputStof = document.getElementById('formula-input').value.trim();
         const resultaat = parseFormule(inputStof);
@@ -401,62 +522,86 @@
                 breakdownUl.appendChild(li);
             });
 
-            // 1. Kijk eerst in onze lokale databank (voor bekende zuren/basen)
-            if (bekendeStoffenPortaal[actieveFormuleString]) {
-                const stof = bekendeStoffenPortaal[actieveFormuleString];
-                infoName.innerHTML = `🧪 ${stof.naam}`;
-                
-                let typeTekst = "";
-                if(stof.karakter.includes("zuur")) typeTekst = "Karakter: 🔴 Zure verbinding";
-                else if(stof.karakter.includes("base")) typeTekst = "Karakter: 🔵 Basische verbinding";
-                else typeTekst = "Karakter: 🟢 Neutrale verbinding";
-                
-                infoType.textContent = typeTekst + ` (Formule: ${actieveFormuleString})`;
-                infoWiki.href = `https://nl.wikipedia.org/wiki/${stof.wiki}`;
-                infoWiki.textContent = `📚 Lees meer over ${stof.wiki} op Wikipedia →`;
-                infoWiki.style.display = "inline-block";
-                
-            } else {
-                // 2. Stof onbekend lokaal? We zoeken het asynchroon op bij Wikidata!
-                
-                // Laat de leerling eerst zien dat we aan het laden zijn:
-                infoName.innerHTML = `⏳ Naam zoeken in database...`;
-                infoType.textContent = "Even geduld, we zoeken de officiële naam op.";
-                infoWiki.style.display = "none"; 
-                
-                resultBox.style.display = 'block';
-                infoCard.style.display = 'block';
-
-                // We WACHTEN (await) hier op het internet:
-                const dynamischeNaam = await haalDynamischeStofNaamOp(actieveFormuleString);
-                
-                infoWiki.style.display = "inline-block"; // Link weer aanzetten
-
-                if (dynamischeNaam && dynamischeNaam.toLowerCase() !== actieveFormuleString.toLowerCase()) {
-                    // Stof gevonden op het internet!
-                    // Let op de beginletter met hoofdletter (voor een mooiere weergave)
-                    const mooieNaam = dynamischeNaam.charAt(0).toUpperCase() + dynamischeNaam.slice(1);
-                    
-                    infoName.innerHTML = `🔬 ${mooieNaam}`;
-                    infoType.textContent = `(Formule: ${actieveFormuleString}) - Let op: Zuurbase-karakter onbekend, we gaan uit van een pH van 7.`;
-                    
-                    // We maken direct een link naar Wikipedia met de gevonden naam
-                    infoWiki.href = `https://nl.wikipedia.org/wiki/${dynamischeNaam}`;
-                    infoWiki.textContent = `📚 Lees meer over ${mooieNaam} op Wikipedia →`;
-                } else {
-                    // Zelfs Wikidata kent de stofnaam niet (of gaf alleen de formule terug)
-                    infoName.innerHTML = `🔬 Formule: ${actieveFormuleString}`;
-                    infoType.textContent = "Deze specifieke verbinding is niet gevonden qua naam, maar we hebben wel de massa berekend!";
-                    infoWiki.href = `https://nl.wikipedia.org/w/index.php?search=${actieveFormuleString}`;
-                    infoWiki.textContent = `🔍 Zoek '${actieveFormuleString}' op Wikipedia →`;
-                }
-            }
-
+            // Toon vast het laadscherm voor PubChem data
+            infoName.innerHTML = `⏳ Live gegevens ophalen uit PubChem...`;
+            infoType.innerHTML = "Even geduld, we zoeken gevarensymbolen, H/P-zinnen en de officiële naam op.";
+            infoWiki.style.display = "none"; 
+            
             resultBox.style.display = 'block';
             infoCard.style.display = 'block';
             warning.style.display = 'none';
-            document.querySelectorAll('.tool-card').forEach(card => card.classList.add('active'));
+
+            // Haal de live data op via onze nieuwe PubChem koppeling
+            const pubChemData = await haalPubChemDataOp(actieveFormuleString);
             
+            infoWiki.style.display = "inline-block"; 
+
+            // Kijk of de stof lokaal gecategoriseerd is voor pH doeleinden
+            let lokaalKarakterTekst = "";
+            if (bekendeStoffenPortaal[actieveFormuleString]) {
+                const stof = bekendeStoffenPortaal[actieveFormuleString];
+                if(stof.karakter.includes("zuur")) lokaalKarakterTekst = "<br>🔴 <strong>Zure verbinding</strong> (rekenmodule onderaan actief)";
+                else if(stof.karakter.includes("base")) lokaalKarakterTekst = "<br>🔵 <strong>Basische verbinding</strong> (rekenmodule onderaan actief)";
+                else lokaalKarakterTekst = "<br>🟢 <strong>Neutrale verbinding</strong> (rekenmodule onderaan actief)";
+            } else {
+                lokaalKarakterTekst = "<br>⚪ <em>Karakter onbekend voor de pH-rekenmodule (we gaan uit van een pH van 7).</em>";
+            }
+
+            if (pubChemData) {
+                const mooieNaam = pubChemData.naam ? pubChemData.naam.charAt(0).toUpperCase() + pubChemData.naam.slice(1) : actieveFormuleString;
+                infoName.innerHTML = `🔬 ${mooieNaam}`;
+                
+                // Bouw uitgebreide PubChem gevarenkaart HTML op
+                let infoHtml = `<strong>Formule:</strong> ${actieveFormuleString} | <strong>PubChem CID:</strong> ${pubChemData.cid}${lokaalKarakterTekst}<br>`;
+                
+                // Toon experimentele pH als PubChem die heeft
+                if (pubChemData.phInfo) {
+                    infoHtml += `<span style="display:inline-block; margin-top:5px;">ℹ️ <strong>PubChem pH info:</strong> <em>${pubChemData.phInfo}</em></span><br>`;
+                }
+                
+                // Voeg GHS Gevarensymbolen toe (indien aanwezig)
+                if (pubChemData.pictograms.length > 0) {
+                    infoHtml += `<div style="margin: 12px 0 8px 0; display: flex; gap: 8px; flex-wrap: wrap;">`;
+                    pubChemData.pictograms.forEach(url => {
+                        infoHtml += `<img src="${url}" alt="GHS Gevarensymbool" title="GHS Waarschuwingssymbool" style="width: 45px; height: 45px; background: white; border: 1px solid #cbd5e1; padding: 2px; border-radius: 4px;">`;
+                    });
+                    infoHtml += `</div>`;
+                }
+                
+                // Voeg H-zinnen toe
+                if (pubChemData.hZinnen.length > 0) {
+                    infoHtml += `<div style="margin-top: 8px;"><strong>⚠️ Gevarenaanduidingen (H-zinnen):</strong>`;
+                    infoHtml += `<ul style="margin: 4px 0 10px 0; padding-left: 20px; font-size: 0.85rem; color: #b91c1c; list-style-type: square;">`;
+                    pubChemData.hZinnen.forEach(h => { infoHtml += `<li>${h}</li>`; });
+                    infoHtml += `</ul></div>`;
+                }
+                
+                // Voeg P-zinnen toe
+                if (pubChemData.pZinnen.length > 0) {
+                    infoHtml += `<div><strong>🛡️ Voorzorgsmaatregelen (P-zinnen):</strong>`;
+                    infoHtml += `<ul style="margin: 4px 0 5px 0; padding-left: 20px; font-size: 0.85rem; color: #1d4ed8; list-style-type: square;">`;
+                    pubChemData.pZinnen.forEach(p => { infoHtml += `<li>${p}</li>`; });
+                    infoHtml += `</ul></div>`;
+                }
+                
+                if (pubChemData.hZinnen.length === 0 && pubChemData.pZinnen.length === 0) {
+                    infoHtml += `<br><em>Geen specifieke GHS-veiligheidsrestricties of H/P-zinnen geregistreerd in PubChem voor deze selectie.</em>`;
+                }
+
+                infoType.innerHTML = infoHtml;
+                
+                // Link aanpassen naar het specifieke PubChem Dashboard
+                infoWiki.href = `https://pubchem.ncbi.nlm.nih.gov/compound/${pubChemData.cid}`;
+                infoWiki.textContent = `📚 Bekijk '${mooieNaam}' op PubChem →`;
+            } else {
+                // Fallback indien PubChem de specifieke formule niet kent
+                infoName.innerHTML = `🔬 Formule: ${actieveFormuleString}`;
+                infoType.innerHTML = `<strong>Formule:</strong> ${actieveFormuleString} ${lokaalKarakterTekst}<br><br><em>Deze verbinding kon niet geautomatiseerd worden gevonden in de PubChem database, maar de molaire massa is wel berekend!</em>`;
+                infoWiki.href = `https://pubchem.ncbi.nlm.nih.gov/#query=${actieveFormuleString}`;
+                infoWiki.textContent = `🔍 Zoek '${actieveFormuleString}' handmatig op PubChem →`;
+            }
+
+            document.querySelectorAll('.tool-card').forEach(card => card.classList.add('active'));
             if (window.MathJax && window.MathJax.typeset) MathJax.typeset();
         } else {
             berekendeMolaireMassa = 0;
@@ -559,7 +704,6 @@
                     break;
             }
 
-            // OPGELOST: Geen kunstmatige begrenzing meer, extreme concentraties tonen nu eerlijk een negatieve pH!
             let phKleur = "#16a34a"; 
             let phAchtergrond = "#f0fdf4";
             if (pH < 6) { phKleur = "#dc2626"; phAchtergrond = "#fef2f2"; }
@@ -582,7 +726,6 @@
 
         if (window.MathJax && window.MathJax.typeset) MathJax.typeset([output]);
     }
-    
 </script>
 
 </body>
